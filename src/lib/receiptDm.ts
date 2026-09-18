@@ -20,14 +20,49 @@ export async function resolveRecipientPubkey(input: string): Promise<string> {
   }
 
   if (nip05.isNip05(value)) {
-    const profile = await nip05.queryProfile(value);
-    if (!profile) throw new Error('Could not resolve NIP-05 address');
-    return profile.pubkey;
+    return queryNip05(value);
   }
 
   if (/^[0-9a-f]{64}$/i.test(value)) return value.toLowerCase();
 
   throw new Error('Enter a valid npub, nprofile, or NIP-05 address (name@domain.com)');
+}
+
+/**
+ * Looks up a NIP-05 address directly rather than via nostr-tools' `queryProfile`,
+ * which takes no abort signal — an unresponsive domain leaves the caller hanging
+ * forever. A lightning address has the same `name@domain` shape as a NIP-05 one,
+ * so this is also where that very easy mix-up surfaces.
+ */
+async function queryNip05(value: string): Promise<string> {
+  const [rawName, domain] = value.split('@');
+  const name = rawName || '_';
+
+  let json: { names?: Record<string, string> };
+  try {
+    const res = await fetch(
+      `https://${domain}/.well-known/nostr.json?name=${encodeURIComponent(name)}`,
+      { redirect: 'error', signal: AbortSignal.timeout(8000) },
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    json = await res.json();
+  } catch {
+    throw new Error(
+      `Couldn't look up ${value} at ${domain}. If that's a lightning address, it won't work here — receipts need an npub or a NIP-05 address.`,
+    );
+  }
+
+  const names = json.names ?? {};
+  const pubkey =
+    names[name] ??
+    names[Object.keys(names).find((k) => k.toLowerCase() === name.toLowerCase()) ?? ''];
+
+  if (!pubkey) {
+    throw new Error(
+      `${domain} has no Nostr pubkey for "${name}". If that's a lightning address, enter the buyer's npub or NIP-05 address instead.`,
+    );
+  }
+  return pubkey;
 }
 
 interface Rumor {

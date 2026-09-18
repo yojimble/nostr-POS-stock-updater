@@ -14,7 +14,10 @@ import {
 } from '@/components/ui/dialog';
 import { resolveLnurlp, requestInvoice, verifyInvoice, getWebLn } from '@/lib/lightning';
 import { resolveRecipientPubkey, sendReceiptDm, formatReceipt } from '@/lib/receiptDm';
+import { buildZapRequest, waitForZapReceipt } from '@/lib/zapReceipt';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useAppContext } from '@/hooks/useAppContext';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useNostr } from '@nostrify/react';
 
 export interface ReceiptLine {
@@ -41,6 +44,14 @@ type ReceiptStatus = 'idle' | 'sending' | 'sent' | 'error';
 export function PaymentDialog({ open, onOpenChange, lightningAddress, sats, comment, onPaid, receiptLines }: PaymentDialogProps) {
   const { user, metadata } = useCurrentUser();
   const { nostr } = useNostr();
+  const { config } = useAppContext();
+
+  // Wallets that have proven they support LUD-21 verify don't need the zap
+  // fallback, and skipping it keeps their sales off public relays.
+  const [verifyProven, setVerifyProven] = useLocalStorage<Record<string, boolean>>(
+    'nostr:pos-verify-proven',
+    {},
+  );
 
   const [status, setStatus] = useState<Status>('creating');
   const [invoice, setInvoice] = useState<string>('');
@@ -49,12 +60,22 @@ export function PaymentDialog({ open, onOpenChange, lightningAddress, sats, comm
   const [chargedSats, setChargedSats] = useState(sats);
   const [receiptTo, setReceiptTo] = useState('');
   const [receiptStatus, setReceiptStatus] = useState<ReceiptStatus>('idle');
+  const [verifyUnavailable, setVerifyUnavailable] = useState(false);
+  const [zapWatch, setZapWatch] = useState<{ invoice: string; since: number } | undefined>();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onPaidRef = useRef(onPaid);
+  onPaidRef.current = onPaid;
 
   // Snapshot props at the instant the dialog opens so a later re-render
   // (e.g. the BTC price refetching) can't regenerate the invoice mid-payment.
   const latestProps = useRef({ lightningAddress, sats, comment });
   latestProps.current = { lightningAddress, sats, comment };
+
+  // Values the effects below read but must not restart for: `setVerifyProven` and
+  // `onPaid` are new closures on every render, and re-running on them would clear
+  // the poll interval before it ever ticked.
+  const envRef = useRef({ user, relayUrls: config.relayUrls, verifyProven, setVerifyProven });
+  envRef.current = { user, relayUrls: config.relayUrls, verifyProven, setVerifyProven };
 
   useEffect(() => {
     if (!open) return;
@@ -68,6 +89,8 @@ export function PaymentDialog({ open, onOpenChange, lightningAddress, sats, comm
     setChargedSats(sats);
     setReceiptTo('');
     setReceiptStatus('idle');
+    setVerifyUnavailable(false);
+    setZapWatch(undefined);
 
     (async () => {
       if (!lightningAddress) {
@@ -77,11 +100,34 @@ export function PaymentDialog({ open, onOpenChange, lightningAddress, sats, comm
       }
       try {
         const params = await resolveLnurlp(lightningAddress, abort.signal);
-        const inv = await requestInvoice(params, sats, comment, abort.signal);
+
+        // Ask for a zap receipt unless this wallet's verify endpoint has already
+        // proven itself — that receipt is the only automatic confirmation for
+        // wallets with no (or an unreachable) verify endpoint.
+        const { user, relayUrls, verifyProven, setVerifyProven } = envRef.current;
+        const zapCapable = Boolean(params.allowsNostr && params.nostrPubkey) && !!user;
+        const useZap = zapCapable && verifyProven[lightningAddress] !== true;
+        const since = Math.floor(Date.now() / 1000) - 60;
+
+        const zapRequest = useZap
+          ? await buildZapRequest({
+              signer: user!.signer,
+              recipientPubkey: user!.pubkey,
+              sats,
+              relays: relayUrls,
+              comment,
+            })
+          : undefined;
+
+        const inv = await requestInvoice(params, sats, comment, abort.signal, zapRequest);
         if (abort.signal.aborted) return;
         setInvoice(inv.pr);
         setVerifyUrl(inv.verify);
-        setStatus(inv.verify ? 'polling' : 'ready');
+        if (useZap) setZapWatch({ invoice: inv.pr, since });
+        if (!inv.verify) {
+          setVerifyProven((prev) => ({ ...prev, [lightningAddress]: false }));
+        }
+        setStatus(inv.verify || useZap ? 'polling' : 'ready');
       } catch (err) {
         if (abort.signal.aborted) return;
         setError(err instanceof Error ? err.message : 'Failed to create invoice');
@@ -93,18 +139,38 @@ export function PaymentDialog({ open, onOpenChange, lightningAddress, sats, comm
     // Only (re)create the invoice when the dialog transitions open — not on every prop recompute.
   }, [open]);
 
+  // LUD-21 verify polling.
   useEffect(() => {
     if (status !== 'polling' || !verifyUrl) return;
+
+    // A couple of failed checks can be a blip, but a verify endpoint that is
+    // unreachable (CORS, 404, wallet down) never recovers — fall back to manual
+    // confirmation rather than spinning on "Waiting for payment…" forever.
+    let consecutiveFailures = 0;
 
     const tick = async () => {
       try {
         const settled = await verifyInvoice(verifyUrl);
+        consecutiveFailures = 0;
         if (settled) {
+          if (lightningAddress) {
+            envRef.current.setVerifyProven((prev) => ({ ...prev, [lightningAddress]: true }));
+          }
           setStatus('paid');
-          onPaid();
+          onPaidRef.current();
         }
-      } catch {
-        // transient network errors are fine to ignore; keep polling
+      } catch (err) {
+        consecutiveFailures++;
+        if (consecutiveFailures >= 3) {
+          console.error('Invoice verify endpoint unavailable:', err);
+          if (lightningAddress) {
+            envRef.current.setVerifyProven((prev) => ({ ...prev, [lightningAddress]: false }));
+          }
+          setVerifyUnavailable(true);
+          // A zap receipt may still confirm this sale, so only drop to manual
+          // confirmation when nothing else is watching.
+          if (!zapWatch) setStatus('ready');
+        }
       }
     };
 
@@ -112,7 +178,31 @@ export function PaymentDialog({ open, onOpenChange, lightningAddress, sats, comm
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [status, verifyUrl, onPaid]);
+  }, [status, verifyUrl, zapWatch, lightningAddress]);
+
+  // NIP-57 zap receipt subscription — the fallback for wallets whose verify
+  // endpoint is missing or unreachable from the browser.
+  useEffect(() => {
+    if (status !== 'polling' || !zapWatch || !user) return;
+
+    const abort = new AbortController();
+
+    (async () => {
+      const receipt = await waitForZapReceipt({
+        pool: nostr,
+        recipientPubkey: user.pubkey,
+        invoice: zapWatch.invoice,
+        since: zapWatch.since,
+        signal: abort.signal,
+      });
+      if (receipt && !abort.signal.aborted) {
+        setStatus('paid');
+        onPaidRef.current();
+      }
+    })();
+
+    return () => abort.abort();
+  }, [status, zapWatch, user, nostr]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(invoice);
@@ -267,20 +357,34 @@ export function PaymentDialog({ open, onOpenChange, lightningAddress, sats, comm
               </div>
 
               {status === 'polling' ? (
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Waiting for payment…
-                </p>
+                <div className="space-y-1 text-center">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Waiting for payment…
+                  </p>
+                  {verifyUnavailable && zapWatch && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Checking via nostr — this wallet can't be polled directly.
+                    </p>
+                  )}
+                </div>
               ) : (
-                <Button
-                  className="w-full"
-                  onClick={() => {
-                    setStatus('paid');
-                    onPaid();
-                  }}
-                >
-                  I've been paid
-                </Button>
+                <div className="w-full space-y-2">
+                  {verifyUnavailable && (
+                    <p className="text-xs text-amber-600 dark:text-amber-500 text-center">
+                      Can't check this wallet for payment automatically. Confirm below once it arrives.
+                    </p>
+                  )}
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      setStatus('paid');
+                      onPaid();
+                    }}
+                  >
+                    I've been paid
+                  </Button>
+                </div>
               )}
             </>
           )}

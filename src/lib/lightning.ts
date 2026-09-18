@@ -7,6 +7,9 @@ export interface LnurlPayParams {
   metadata: string;
   commentAllowed?: number;
   tag: string;
+  /** NIP-57: set when the provider will publish zap receipts for paid invoices. */
+  allowsNostr?: boolean;
+  nostrPubkey?: string;
 }
 
 export interface LnurlInvoice {
@@ -36,6 +39,8 @@ export async function requestInvoice(
   sats: number,
   comment?: string,
   signal?: AbortSignal,
+  /** NIP-57 zap request. When given, the provider publishes a zap receipt on payment. */
+  zapRequest?: unknown,
 ): Promise<LnurlInvoice> {
   const msats = Math.round(sats * 1000);
   if (msats < params.minSendable || msats > params.maxSendable) {
@@ -47,6 +52,9 @@ export async function requestInvoice(
   if (comment && params.commentAllowed && params.commentAllowed > 0) {
     url.searchParams.set('comment', comment.slice(0, params.commentAllowed));
   }
+  if (zapRequest) {
+    url.searchParams.set('nostr', JSON.stringify(zapRequest));
+  }
 
   const res = await fetch(url.toString(), { signal });
   const data = await res.json();
@@ -56,11 +64,21 @@ export async function requestInvoice(
   return { pr: data.pr as string, verify: data.verify as string | undefined };
 }
 
+/**
+ * LUD-21 verify. Throws when the endpoint can't be reached or answers badly, so
+ * callers can tell "not paid yet" (false) apart from "we have no idea" (throw) —
+ * silently treating an unreachable endpoint as unpaid leaves a paid invoice
+ * spinning forever.
+ */
 export async function verifyInvoice(verifyUrl: string, signal?: AbortSignal): Promise<boolean> {
-  const res = await fetch(verifyUrl, { signal });
-  if (!res.ok) return false;
+  const res = await fetch(verifyUrl, {
+    signal: signal ?? AbortSignal.timeout(5000),
+  });
+  if (!res.ok) throw new Error(`Verify endpoint returned ${res.status}`);
   const data = await res.json();
-  return Boolean(data.settled);
+  if (data.status === 'ERROR') throw new Error(data.reason || 'Verify endpoint returned an error');
+  // LUD-21 specifies `settled`; some wallets send `paid` instead.
+  return Boolean(data.settled ?? data.paid);
 }
 
 interface WebLNProvider {
