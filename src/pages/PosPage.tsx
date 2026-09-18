@@ -24,6 +24,7 @@ import { useNostrPublish } from '@/hooks/useNostrPublish';
 import { useBtcPrice, toSats } from '@/hooks/useBtcPrice';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { PaymentDialog } from '@/components/pos/PaymentDialog';
+import { PaymentSupportBadge } from '@/components/pos/PaymentSupportBadge';
 
 type ViewMode = 'image' | 'list';
 
@@ -342,6 +343,8 @@ export default function PosPage() {
           <LoginArea />
         </div>
       </div>
+
+      <PaymentSupportBadge lightningAddress={lightningAddress} />
 
       <div className="flex items-center gap-2">
         <div className="relative flex-1">

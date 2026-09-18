@@ -56,15 +56,9 @@ Avoid ZBD for unattended tills: with neither channel, every sale needs someone t
 
 #### Checking your own address
 
-```sh
-# 1. Does it support zaps? Look for "allowsNostr": true
-curl https://<domain>/.well-known/lnurlp/<name>
+You don't need to test anything by hand. Open the POS and it says, at the top of the screen, whether sales on your lightning address confirm themselves — and if they don't, that every sale will need checking in your wallet before tapping "I've been paid".
 
-# 2. Does it support verify? Call the callback from step 1 and look for a "verify" URL
-curl "<callback>?amount=1000"
-```
-
-Either one is enough for automatic confirmation. Run this against your own address rather than trusting the table — support differs between accounts on the same provider.
+Check it before handing the till to staff, since they can't confirm payments against an owner's wallet they can't see.
 
 #### Zap receipts are public
 
