@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSeoMeta } from '@unhead/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ImageOff, AlertCircle, Minus, Plus, Trash2, Zap, RefreshCw, LayoutGrid, List, Search, X } from 'lucide-react';
+import { ImageOff, AlertCircle, Minus, Plus, Trash2, Zap, RefreshCw, LayoutGrid, List, Search, X, Eye, EyeOff } from 'lucide-react';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,11 @@ const SORT_OPTIONS: { value: SortMode; label: string }[] = [
 
 function tagValue(tags: string[][], name: string): string | undefined {
   return tags.find(([t]) => t === name)?.[1];
+}
+
+/** Matches the inventory page: listings tagged hidden are greyed out here too. */
+function isHidden(ev: NostrEvent): boolean {
+  return tagValue(ev.tags, 'visibility') === 'hidden';
 }
 
 function hasStockTag(ev: NostrEvent): boolean {
@@ -111,6 +116,7 @@ export default function PosPage() {
   const [charging, setCharging] = useState(false);
   const [viewMode, setViewMode] = useLocalStorage<ViewMode>('nostr:pos-view-mode', 'image');
   const [sortMode, setSortMode] = useLocalStorage<SortMode>('nostr:pos-sort-mode', 'newest');
+  const [showHidden, setShowHidden] = useLocalStorage<boolean>('nostr:pos-show-hidden', true);
   const [search, setSearch] = useState('');
   const [memo, setMemo] = useState('');
 
@@ -137,10 +143,12 @@ export default function PosPage() {
   const visibleListings = useMemo(() => {
     if (!listings) return [];
 
+    const shown = showHidden ? listings : listings.filter((ev) => !isHidden(ev));
+
     const q = search.trim().toLowerCase();
     const filtered = q
-      ? listings.filter((ev) => (tagValue(ev.tags, 'title') ?? '').toLowerCase().includes(q))
-      : listings;
+      ? shown.filter((ev) => (tagValue(ev.tags, 'title') ?? '').toLowerCase().includes(q))
+      : shown;
 
     const priceOf = (ev: NostrEvent) => {
       const p = ev.tags.find(([t]) => t === 'price')?.[1];
@@ -177,7 +185,7 @@ export default function PosPage() {
         break;
     }
     return sorted;
-  }, [listings, search, sortMode]);
+  }, [listings, search, sortMode, showHidden]);
 
   if (!user) {
     return (
@@ -319,6 +327,15 @@ export default function PosPage() {
               <List className="h-4 w-4" />
             </Button>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowHidden(!showHidden)}
+            title={showHidden ? 'Hide hidden items' : 'Show hidden items'}
+            aria-pressed={!showHidden}
+          >
+            {showHidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => refetch()} title="Refresh" disabled={isLoading}>
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
           </Button>
@@ -386,8 +403,18 @@ export default function PosPage() {
 
       {!isLoading && !isError && listings && listings.length > 0 && visibleListings.length === 0 && (
         <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No items match "{search}".
+          <CardContent className="py-10 text-center text-sm text-muted-foreground space-y-3">
+            {search.trim() ? (
+              <p>No items match "{search}".</p>
+            ) : (
+              <p>All items are hidden.</p>
+            )}
+            {!showHidden && (
+              <Button variant="outline" size="sm" onClick={() => setShowHidden(true)}>
+                <Eye className="h-4 w-4 mr-2" />
+                Show hidden items
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
@@ -404,6 +431,7 @@ export default function PosPage() {
             const stock = currentQty(ev);
             const inCart = cart[d]?.qty ?? 0;
             const outOfStock = managed && stock - inCart <= 0;
+            const dimmed = isHidden(ev);
 
             return (
               <button
@@ -416,6 +444,7 @@ export default function PosPage() {
                   'focus:outline-none focus:ring-2 focus:ring-ring ring-offset-1',
                   'transition-transform active:scale-95',
                   'disabled:opacity-60 disabled:cursor-not-allowed',
+                  dimmed && 'opacity-60',
                 )}
                 aria-label={`Add ${title} to order`}
               >
@@ -457,6 +486,7 @@ export default function PosPage() {
             const stock = currentQty(ev);
             const inCart = cart[d]?.qty ?? 0;
             const outOfStock = managed && stock - inCart <= 0;
+            const dimmed = isHidden(ev);
 
             return (
               <button
@@ -468,6 +498,7 @@ export default function PosPage() {
                   'w-full flex items-center gap-3 px-3 py-2.5 bg-background text-left',
                   'hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-inset',
                   'disabled:opacity-60 disabled:cursor-not-allowed',
+                  dimmed && 'opacity-60',
                 )}
                 aria-label={`Add ${title} to order`}
               >

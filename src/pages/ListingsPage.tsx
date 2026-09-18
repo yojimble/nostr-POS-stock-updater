@@ -233,6 +233,7 @@ export default function ListingsPage() {
                   'focus:outline-none focus:ring-2 focus:ring-ring ring-offset-1',
                   'transition-transform active:scale-95',
                   'disabled:opacity-60 disabled:cursor-not-allowed',
+                  dimmed && 'opacity-60',
                 )}
                 aria-label={`${mode === 'add' ? 'Add to' : 'Remove from'} ${title}`}
               >
@@ -240,11 +241,11 @@ export default function ListingsPage() {
                   <img
                     src={image}
                     alt=""
-                    className={cn('h-full w-full object-cover', dimmed && 'grayscale opacity-80')}
+                    className="h-full w-full object-cover"
                     loading="lazy"
                   />
                 ) : (
-                  <div className={cn('h-full w-full flex items-center justify-center text-muted-foreground', dimmed && 'grayscale opacity-80')}>
+                  <div className="h-full w-full flex items-center justify-center text-muted-foreground">
                     <ImageOff className="h-6 w-6" />
                   </div>
                 )}
