@@ -115,7 +115,6 @@ export function PaymentDialog({ open, onOpenChange, lightningAddress, sats, comm
               recipientPubkey: user!.pubkey,
               sats,
               relays: relayUrls,
-              comment,
             })
           : undefined;
 

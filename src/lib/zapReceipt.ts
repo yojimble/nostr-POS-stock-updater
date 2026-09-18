@@ -15,19 +15,23 @@ interface ReqPool {
  *
  * The signer must be set to auto-approve kind 9734, or each charge waits on a
  * manual approval — part of setting the till up before handing it to staff.
+ *
+ * The content is deliberately left empty. The order memo ("2x Coffee, 1x Cake")
+ * ends up in the zap receipt's description tag, which is a public event — the
+ * amount of a sale being visible is bad enough without itemising it. The memo
+ * still reaches the seller's own wallet through the LNURL comment.
  */
 export async function buildZapRequest(opts: {
   signer: { signEvent(t: Omit<NostrEvent, 'id' | 'pubkey' | 'sig'>): Promise<NostrEvent> };
   recipientPubkey: string;
   sats: number;
   relays: string[];
-  comment?: string;
 }): Promise<NostrEvent> {
-  const { signer, recipientPubkey, sats, relays, comment } = opts;
+  const { signer, recipientPubkey, sats, relays } = opts;
 
   return signer.signEvent({
     kind: 9734,
-    content: comment ?? '',
+    content: '',
     tags: [
       ['p', recipientPubkey],
       ['amount', String(Math.round(sats * 1000))],
