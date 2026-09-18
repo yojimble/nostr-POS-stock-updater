@@ -64,6 +64,8 @@ Check it before handing the till to staff, since they can't confirm payments aga
 
 When the zap channel is used, the receipt your wallet publishes is a public Nostr event tagged to your pubkey, showing the amount and the time. Anyone can watch your takings.
 
+**They appear as self-zaps.** The zap request is signed with your own key, so other Nostr clients show each sale as you zapping yourself. That's expected, not a bug — it's how the receipt stays attributable to your shop without involving the buyer.
+
 It says nothing about the buyer — they pay an ordinary Lightning invoice and never touch Nostr — and nothing about what was sold: the order memo is deliberately kept out of the zap request, so it reaches your own wallet but not the public receipt.
 
 The app avoids publishing at all where it can: once a wallet's `verify` endpoint has successfully confirmed a payment, later charges stop requesting zap receipts for that address.
