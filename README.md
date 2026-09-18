@@ -33,9 +33,9 @@ A PWA for quickly updating stock on your Nostr NIP-99 classified listings (kind 
 
 Nothing to configure: the app inspects your provider on each charge and uses whatever it supports. The customer is unaffected either way — they scan an ordinary Lightning invoice with any wallet, and need no Nostr account.
 
-#### Choosing a wallet
+#### Choosing a lightning address provider
 
-Confirmation depends on the lightning address (`lud16`) on the **seller's** Nostr profile, never on the buyer's wallet. Measured against live endpoints on 2026-09-19:
+Confirmation depends on whatever serves the lightning address (`lud16`) on the **seller's** Nostr profile — a wallet app, a custodial service, or your own server — never on the buyer's wallet. Measured against live endpoints on 2026-09-19:
 
 | Provider | LUD-21 `verify` | Zap receipts | Confirms automatically? |
 | --- | --- | --- | --- |
@@ -43,14 +43,14 @@ Confirmation depends on the lightning address (`lud16`) on the **seller's** Nost
 | [Coinos](https://coinos.io) | ❌ | ✅ | ✅ Via zap receipts |
 | [Primal](https://primal.net) | ❌ | ✅ | ✅ Via zap receipts |
 | [Blink](https://blink.sv) | ❌ | ✅ | ✅ Via zap receipts |
-| [LNbits](https://lnbits.com) | ✅ (recent versions) | Via the Nostr extension | ✅ Self-hosted, depends on your setup |
-| [BTCPay Server](https://btcpayserver.org) | ✅ (recent versions) | Via the Nostr plugin | ✅ Self-hosted, depends on your setup |
+| [LNbits](https://lnbits.com) (self-hosted) | ✅ (recent versions) | Via the Nostr extension | ✅ Depends on your setup |
+| [BTCPay Server](https://btcpayserver.org) (self-hosted server, not a wallet) | ✅ (recent versions) | Via the Nostr plugin | ✅ Depends on your setup |
 | [Stacker.news](https://stacker.news) | ❌ | ❌ | ❌ Manual confirm only |
 | [ZBD](https://zbd.gg) | ❌ | ❌ | ❌ Manual confirm only |
 | Wallet of Satoshi | ❌ | Untested | ⚠️ Likely manual confirm |
 | Strike | ❌ | Untested | ⚠️ Likely manual confirm |
 
-**Recommended: Alby**, as the only provider tested with both channels — if one breaks, the other still confirms the sale. Coinos, Primal and Blink all confirm reliably over zap receipts alone. Self-hosting LNbits or BTCPay gives you both, at the cost of running it.
+**Recommended: Alby**, as the only provider tested with both channels — if one breaks, the other still confirms the sale. Coinos, Primal and Blink all confirm reliably over zap receipts alone. Running your own LNbits or BTCPay Server gives you both, at the cost of running it; note those are lightning address servers in front of your node, not wallets in their own right.
 
 Avoid Stacker.news, ZBD, Wallet of Satoshi and Strike for unattended tills: every sale needs someone to check the wallet and tap "I've been paid", which an employee can't do on the owner's behalf.
 
