@@ -137,8 +137,9 @@ export default function CalculatorPage() {
 
   if (!user) {
     return (
-      <div className="w-full max-w-md mx-auto px-4 py-12 text-center space-y-6">
+      <div className="w-full max-w-3xl mx-auto px-4 py-12 text-center space-y-6">
         <NavTabs />
+        <div className="max-w-md mx-auto space-y-6">
         <div>
           <Zap className="mx-auto h-10 w-10 text-muted-foreground" />
           <h1 className="mt-4 text-2xl font-semibold">Calculator</h1>
@@ -147,13 +148,16 @@ export default function CalculatorPage() {
           </p>
         </div>
         <LoginArea />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-6 space-y-5">
+    <div className="w-full max-w-3xl mx-auto px-4 py-6 space-y-5">
       <NavTabs />
+
+      <div className="max-w-md mx-auto space-y-5">
 
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold">Calculator</h1>
@@ -237,6 +241,7 @@ export default function CalculatorPage() {
           setMemo('');
         }}
       />
+      </div>
     </div>
   );
 }

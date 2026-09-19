@@ -19,6 +19,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppContext } from '@/hooks/useAppContext';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { ANON_ZAPS_KEY } from '@/lib/posSettings';
 
 const head = createHead({
   plugins: [
@@ -59,6 +64,7 @@ function AppContent() {
   const [relayInput2, setRelayInput2] = useState(config.relayUrls[1] || "wss://relay.plebeian.market");
   const [relayInput3, setRelayInput3] = useState(config.relayUrls[2] || "wss://nos.lol");
   const [relayInput4, setRelayInput4] = useState(config.relayUrls[3] || "");
+  const [anonymousZaps, setAnonymousZaps] = useLocalStorage<boolean>(ANON_ZAPS_KEY, false);
 
   const handleSaveRelay = () => {
     const newRelayUrls: string[] = [];
@@ -164,6 +170,25 @@ function AppContent() {
           </div>
           <div className="flex justify-end">
             <Button onClick={handleSaveRelay}>Save changes</Button>
+          </div>
+
+          <Separator className="my-6" />
+
+          <div className="flex items-start gap-3">
+            <Switch
+              id="anon-zaps"
+              checked={anonymousZaps}
+              onCheckedChange={setAnonymousZaps}
+              className="mt-0.5"
+            />
+            <Label htmlFor="anon-zaps" className="font-normal leading-snug">
+              Anonymous zap receipts
+              <span className="block text-xs text-muted-foreground mt-1">
+                {anonymousZaps
+                  ? "Sales aren't linked to your Nostr identity, and your signer is never asked to approve one."
+                  : 'Sales appear publicly as self-zaps from your account, and your signer must auto-approve kind 9734.'}
+              </span>
+            </Label>
           </div>
         </SheetContent>
       </Sheet>

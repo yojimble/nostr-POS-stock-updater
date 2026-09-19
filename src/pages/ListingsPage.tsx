@@ -77,16 +77,18 @@ export default function ListingsPage() {
 
   if (!user) {
     return (
-      <div className="w-full max-w-md mx-auto px-4 py-12 text-center space-y-6">
+      <div className="w-full max-w-3xl mx-auto px-4 py-12 text-center space-y-6">
         <NavTabs />
-        <div>
-          <Tag className="mx-auto h-10 w-10 text-muted-foreground" />
-          <h1 className="mt-4 text-2xl font-semibold">Nostr Stock Updater</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to adjust stock on your existing classified listings.
-          </p>
+        <div className="max-w-md mx-auto space-y-6">
+          <div>
+            <Tag className="mx-auto h-10 w-10 text-muted-foreground" />
+            <h1 className="mt-4 text-2xl font-semibold">Nostr Stock Updater</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Sign in to adjust stock on your existing classified listings.
+            </p>
+          </div>
+          <LoginArea />
         </div>
-        <LoginArea />
       </div>
     );
   }

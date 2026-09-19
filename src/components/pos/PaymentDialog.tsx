@@ -15,6 +15,7 @@ import {
 import { resolveLnurlp, requestInvoice, verifyInvoice, getWebLn } from '@/lib/lightning';
 import { resolveRecipientPubkey, sendReceiptDm, formatReceipt } from '@/lib/receiptDm';
 import { buildZapRequest, waitForZapReceipt } from '@/lib/zapReceipt';
+import { anonymousZapsEnabled } from '@/lib/posSettings';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAppContext } from '@/hooks/useAppContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -115,6 +116,7 @@ export function PaymentDialog({ open, onOpenChange, lightningAddress, sats, comm
               recipientPubkey: user!.pubkey,
               sats,
               relays: relayUrls,
+              anonymous: anonymousZapsEnabled(),
             })
           : undefined;
 

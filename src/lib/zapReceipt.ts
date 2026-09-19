@@ -1,3 +1,4 @@
+import { finalizeEvent, generateSecretKey } from 'nostr-tools';
 import type { NostrEvent, NostrFilter } from '@nostrify/nostrify';
 
 type NostrRelayMsg = [string, ...unknown[]];
@@ -10,26 +11,31 @@ interface ReqPool {
 }
 
 /**
- * Builds a NIP-57 zap request for an invoice the POS is about to display,
- * signed with the seller's own key so the zaps are attributable to the shop.
+ * Builds a NIP-57 zap request for an invoice the POS is about to display.
  *
- * The signer must be set to auto-approve kind 9734, or each charge waits on a
- * manual approval — part of setting the till up before handing it to staff.
+ * Signed with the seller's own key, so sales are attributable to the shop — they
+ * show up in Nostr clients as self-zaps. The signer must be set to auto-approve
+ * kind 9734, or each charge waits on a manual approval.
  *
- * The content is deliberately left empty. The order memo ("2x Coffee, 1x Cake")
- * ends up in the zap receipt's description tag, which is a public event — the
- * amount of a sale being visible is bad enough without itemising it. The memo
- * still reaches the seller's own wallet through the LNURL comment.
+ * With `anonymous`, a throwaway key signs instead: nothing in NIP-57 requires a
+ * particular signer, so the receipt still confirms the sale, but it isn't tied to
+ * the shop's identity and needs no signer approval at all.
+ *
+ * The content is deliberately left empty either way. The order memo ("2x Coffee,
+ * 1x Cake") would end up in the zap receipt's description tag, which is a public
+ * event — the amount of a sale being visible is bad enough without itemising it.
+ * The memo still reaches the seller's own wallet through the LNURL comment.
  */
 export async function buildZapRequest(opts: {
   signer: { signEvent(t: Omit<NostrEvent, 'id' | 'pubkey' | 'sig'>): Promise<NostrEvent> };
   recipientPubkey: string;
   sats: number;
   relays: string[];
+  anonymous?: boolean;
 }): Promise<NostrEvent> {
-  const { signer, recipientPubkey, sats, relays } = opts;
+  const { signer, recipientPubkey, sats, relays, anonymous } = opts;
 
-  return signer.signEvent({
+  const template = {
     kind: 9734,
     content: '',
     tags: [
@@ -38,7 +44,13 @@ export async function buildZapRequest(opts: {
       ['relays', ...relays],
     ],
     created_at: Math.floor(Date.now() / 1000),
-  });
+  };
+
+  if (anonymous) {
+    return finalizeEvent(template, generateSecretKey()) as unknown as NostrEvent;
+  }
+
+  return signer.signEvent(template);
 }
 
 function tagValue(event: NostrEvent, name: string): string | undefined {

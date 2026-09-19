@@ -64,13 +64,15 @@ Check it before handing the till to staff, since they can't confirm payments aga
 
 When the zap channel is used, the receipt your wallet publishes is a public Nostr event tagged to your pubkey, showing the amount and the time. Anyone can watch your takings.
 
-**They appear as self-zaps.** The zap request is signed with your own key, so other Nostr clients show each sale as you zapping yourself. That's expected, not a bug — it's how the receipt stays attributable to your shop without involving the buyer.
+**They appear as self-zaps.** By default the zap request is signed with your own key, so other Nostr clients show each sale as you zapping yourself. That's expected, not a bug — it's how the receipt stays attributable to your shop without involving the buyer.
+
+**Or make them anonymous.** The settings cog has an "Anonymous zap receipts" switch. With it on, each zap request is signed by a throwaway key instead: sales still confirm exactly the same way, but nothing links them to your Nostr identity, and no self-zaps appear on your profile. It also removes the kind 9734 setup step, since your signer is never asked to approve anything. The amount and time of each sale remain publicly visible either way — they're just not attributable to you.
 
 It says nothing about the buyer — they pay an ordinary Lightning invoice and never touch Nostr — and nothing about what was sold: the order memo is deliberately kept out of the zap request, so it reaches your own wallet but not the public receipt.
 
 The app avoids publishing at all where it can: once a wallet's `verify` endpoint has successfully confirmed a payment, later charges stop requesting zap receipts for that address.
 
-Signing the zap request uses the shop's key, so set your signer to auto-approve **kind 9734** before handing the till to staff — otherwise each charge waits on a manual approval. Amber supports this per event kind; browser extensions have equivalent settings.
+Unless you turn on anonymous receipts, signing the zap request uses the shop's key — so set your signer to auto-approve **kind 9734** before handing the till to staff, or each charge waits on a manual approval nobody at the counter can give. Amber supports this per event kind; browser extensions have equivalent settings.
 
 ## Built with
 
