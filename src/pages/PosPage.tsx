@@ -190,15 +190,18 @@ export default function PosPage() {
 
   if (!user) {
     return (
-      <div className="w-full max-w-md mx-auto px-4 py-12 text-center space-y-6">
-        <div>
-          <Zap className="mx-auto h-10 w-10 text-muted-foreground" />
-          <h1 className="mt-4 text-2xl font-semibold">Point of Sale</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to build an order from your listings.
-          </p>
+      <div className="w-full max-w-3xl mx-auto px-4 py-12 text-center space-y-6">
+        <NavTabs />
+        <div className="max-w-md mx-auto space-y-6">
+          <div>
+            <Zap className="mx-auto h-10 w-10 text-muted-foreground" />
+            <h1 className="mt-4 text-2xl font-semibold">Point of Sale</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Sign in to build an order from your listings.
+            </p>
+          </div>
+          <LoginArea />
         </div>
-        <LoginArea />
       </div>
     );
   }
