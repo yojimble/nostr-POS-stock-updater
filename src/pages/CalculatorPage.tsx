@@ -156,12 +156,12 @@ export default function CalculatorPage() {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-3 space-y-3">
+    <div className="w-full max-w-3xl mx-auto px-4 py-3 space-y-4">
       <NavTabs />
 
-      <div className="max-w-md mx-auto space-y-3">
+      <div className="max-w-md mx-auto space-y-4">
 
-      <div className="flex h-10 items-center justify-between gap-4">
+      <div className="flex h-12 items-center justify-between gap-4">
         <h1 className="sr-only">Calculator</h1>
         <p className="text-xs text-muted-foreground">
           Charging in <span className="font-medium text-foreground">{currency}</span>, from your listing prices

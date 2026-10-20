@@ -135,10 +135,10 @@ export default function ListingsPage() {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 pt-3 pb-32 space-y-3">
+    <div className="w-full max-w-3xl mx-auto px-4 pt-3 pb-32 space-y-4">
       <NavTabs />
 
-      <div className="flex h-10 items-center justify-end gap-4">
+      <div className="flex h-12 items-center justify-end gap-4">
         <h1 className="sr-only">Inventory</h1>
         <div className="flex items-center gap-2">
           <Button
