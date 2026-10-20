@@ -19,7 +19,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Settings, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppContext } from '@/hooks/useAppContext';
+import { cn } from '@/lib/utils';
 import { useUserRelayList } from '@/hooks/useUserRelayList';
+import { SettingsSheetContext } from '@/contexts/SettingsSheetContext';
+import { useAndroidBackButton } from '@/hooks/useAndroidBackButton';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -59,6 +62,8 @@ const presetRelays = [
 function AppContent() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { config, updateConfig } = useAppContext();
+  const { logins } = useNostrLogin();
+  useAndroidBackButton();
 
   // One box per relay; the list grows and shrinks to fit
   const [relayInputs, setRelayInputs] = useState<string[]>(
@@ -100,20 +105,28 @@ function AppContent() {
     setIsSettingsOpen(false);
   };
 
+  // Signed out: centre the sign-in card. Signed in: pin every tab to the top so the tab bar does not jump between tabs.
   return (
-    <div className="flex-grow flex items-center justify-center"> {/* Removed min-h-screen */}
-      <AppRouter />
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed bottom-4 right-4 rounded-full shadow-lg z-50"
-        onClick={() => setIsSettingsOpen(true)}
-      >
-        <Settings className="h-5 w-5" />
-      </Button>
+    <div className={cn("flex-grow flex justify-center", logins.length === 0 ? "items-center" : "items-start")}>
+      <SettingsSheetContext.Provider value={{ openSettings: () => setIsSettingsOpen(true) }}>
+        <AppRouter />
+      </SettingsSheetContext.Provider>
+      {/* Signed in, settings live in the profile picture's menu; signed out there is no picture */}
+      {logins.length === 0 && (
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Settings"
+          className="fixed top-1 right-2 h-8 w-8 rounded-full shadow-md z-50 mt-[env(safe-area-inset-top)]"
+          onClick={() => setIsSettingsOpen(true)}
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      )}
 
       <Sheet open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <SheetContent>
+        {/* don't focus the first relay box on open: it selects the text and raises the keyboard */}
+        <SheetContent onOpenAutoFocus={(e) => e.preventDefault()}>
           <SheetHeader>
             <SheetTitle>Settings</SheetTitle>
             <SheetDescription>
@@ -142,7 +155,7 @@ function AppContent() {
               )}
             </div>
           )}
-          <div className="grid gap-3 py-4 max-h-[50vh] overflow-y-auto">
+          <div className="grid gap-3 py-4 px-2 -mx-2 max-h-[50vh] overflow-y-auto">
             {relayInputs.map((url, index) => (
               <div key={index} className="flex items-center gap-2">
                 <Input
