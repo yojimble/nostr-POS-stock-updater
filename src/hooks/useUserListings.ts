@@ -2,19 +2,24 @@ import { useNostr } from '@nostrify/react';
 import { useQuery } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
 
+import { useAppContext } from './useAppContext';
 import { useCurrentUser } from './useCurrentUser';
+import { queryRelays } from '@/lib/queryRelays';
 
 export function useUserListings() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
+  const { config } = useAppContext();
 
   return useQuery<NostrEvent[]>({
     queryKey: ['nip99-listings', user?.pubkey ?? ''],
     enabled: !!user?.pubkey,
     queryFn: async ({ signal }) => {
-      const events = await nostr.query(
+      const events = await queryRelays(
+        nostr,
         [{ kinds: [30402], authors: [user!.pubkey], limit: 500 }],
-        { signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]) },
+        config.relayUrls.filter(Boolean),
+        { signal },
       );
 
       // Relays should already dedupe parameterized replaceable events by d-tag,
