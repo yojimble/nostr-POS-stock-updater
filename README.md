@@ -74,6 +74,45 @@ The app avoids publishing at all where it can: once a wallet's `verify` endpoint
 
 Unless you turn on anonymous receipts, signing the zap request uses the shop's key — so set your signer to auto-approve **kind 9734** before handing the till to staff, or each charge waits on a manual approval nobody at the counter can give. Amber supports this per event kind; browser extensions have equivalent settings.
 
+## Setting up staff devices
+
+The shop's key stays on the **owner's phone**, in a signer such as [Amber](https://github.com/greenart7c3/Amber). Staff tills (the web app or the Android app) never hold the key. They ask the owner's signer to sign each action over Nostr Connect (NIP-46), so a till can ring up sales without the owner standing next to it, and it cannot sign anything the owner has not allowed.
+
+### One-time setup, by the owner
+
+1. Put the shop's key in Amber on your own phone. Do not install or log into Amber on a staff device.
+2. On the till, open the app and choose **Log in**, then the **Amber** tab. A QR code appears.
+3. On your phone, scan the QR code with Amber. Amber lists what the till is asking to be allowed to do:
+   - sign: profile (kind 0), notes (1), gift-wrapped receipts (13 and 1059), comments (1111), zap requests (9734) and listings (30402);
+   - encrypt and decrypt with NIP-44.
+4. Approve it and **tick "remember my choice"** (Amber's wording may differ by version) so those actions are approved automatically from now on. Do not switch the till to a mode where Amber approves everything without asking, or the lock below stops working.
+5. Ring up a test sale on the till. It should complete with no prompt on your phone.
+
+The till now works on its own. Keep your phone switched on and online during opening hours, and let Amber run in the background (turn off battery optimisation for it), or the till cannot get its signatures.
+
+### Staff trying to switch accounts
+
+The till's account menu offers **Switch account**, **Add another account** and **Log out**. None of them work on their own. Each one asks your Amber to sign a short request (event kind 22900, "Approve: log out on a staff device"):
+
+- You get the alert on your phone and approve or reject it.
+- Approve: the till does what was asked.
+- Reject, or no answer: nothing changes and the till shows "Not approved".
+
+That request is **not** in the permissions you approved at setup, and it is never published. Do not tick "remember my choice" for it. If you do, Amber will approve it automatically and staff can log out freely.
+
+### Taking a till out of service
+
+- **Revoke it from your phone:** remove the connected app in Amber. The till can no longer sign anything.
+- **Change who the till is logged in as:** revoke the old connection, then log in on the till again with a new QR code. If the old signer cannot be reached, clearing the app's data (Android settings, then the app, then Clear data) also resets it.
+- **If your phone is off or offline:** the approval request cannot be answered, so nobody can log out or switch. Sales also cannot be signed until your phone is back.
+
+### Android app
+
+The login screen in the Android app offers both ways in:
+
+- **Staff device:** scan the QR code with the owner's Amber on another phone (the setup above). Use this on every till that staff handle.
+- **Shop owner using this phone:** **Login with Amber on this phone** talks to an Amber installed on the same phone (NIP-55). Use it only if you run the shop yourself from one phone. On a staff device it would put the shop's key in staff hands, and the log-out approval would appear on the same phone, where staff could approve it themselves.
+
 ## Built with
 
 - [React 18](https://react.dev/) + [Vite](https://vitejs.dev/)
@@ -82,7 +121,11 @@ Unless you turn on anonymous receipts, signing the zap request uses the shop's k
 - [nostr-tools](https://github.com/nbd-wtf/nostr-tools) (NIP-17/NIP-44/NIP-46 primitives)
 - [qrcode.react](https://github.com/zpao/qrcode.react)
 - [vite-plugin-pwa](https://vite-pwa-org.netlify.app/)
-- [MKStack](https://soapbox.pub/mkstack) (scaffolding)
+- [Capacitor](https://capacitorjs.com/) + [capacitor-plugin-nostr-signer](https://github.com/hzrd149/capacitor-plugin-nostr-signer) (Android app, signs through Amber via NIP-55)
+
+## Credits
+
+This app started from [MKStack](https://soapbox.pub/mkstack), Soapbox's starter template for Nostr apps built with React, Tailwind, shadcn/ui and Nostrify.
 
 ## Getting started
 
