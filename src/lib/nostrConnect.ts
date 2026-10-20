@@ -1,10 +1,10 @@
-import { generateSecretKey, getPublicKey, nip44 } from 'nostr-tools';
+import { generateSecretKey, getPublicKey, nip04, nip44 } from 'nostr-tools';
 import type { NPool, NostrEvent } from '@nostrify/nostrify';
 
 export interface NostrConnectSession {
   uri: string;
   clientPubkey: string;
-  relay: string;
+  relays: string[];
   secret: string;
 }
 
@@ -19,13 +19,15 @@ const PERMS = [
   'sign_event:1',
   'sign_event:13',
   'sign_event:1059',
+  'sign_event:1111',
+  'sign_event:9734',
   'sign_event:30402',
   'nip44_encrypt',
   'nip44_decrypt',
 ].join(',');
 
 /** Creates a new client-initiated NIP-46 ("nostrconnect://") pairing session. */
-export function createNostrConnectSession(relay: string, appName: string): {
+export function createNostrConnectSession(relays: string[], appName: string): {
   session: NostrConnectSession;
   clientSecretKey: Uint8Array;
 } {
@@ -34,14 +36,23 @@ export function createNostrConnectSession(relay: string, appName: string): {
   const secret = randomSecret();
 
   const params = new URLSearchParams();
-  params.set('relay', relay);
+  for (const relay of relays) params.append('relay', relay);
   params.set('secret', secret);
   params.set('name', appName);
   params.set('perms', PERMS);
 
   const uri = `nostrconnect://${clientPubkey}?${params.toString()}`;
 
-  return { session: { uri, clientPubkey, relay, secret }, clientSecretKey };
+  return { session: { uri, clientPubkey, relays, secret }, clientSecretKey };
+}
+
+// Newer signers reply with NIP-44; older ones still use NIP-04.
+function decryptAck(clientSecretKey: Uint8Array, event: NostrEvent): string {
+  try {
+    return nip44.decrypt(event.content, nip44.getConversationKey(clientSecretKey, event.pubkey));
+  } catch {
+    return nip04.decrypt(clientSecretKey, event.pubkey, event.content);
+  }
 }
 
 /**
@@ -54,7 +65,7 @@ export async function waitForNostrConnectAck(
   session: NostrConnectSession,
   signal: AbortSignal,
 ): Promise<string> {
-  const pool = nostr.group([session.relay]);
+  const pool = nostr.group(session.relays);
   const since = Math.floor(Date.now() / 1000) - 10;
 
   for await (const msg of pool.req([{ kinds: [24133], '#p': [session.clientPubkey], since }], { signal })) {
@@ -62,8 +73,7 @@ export async function waitForNostrConnectAck(
     const event = msg[2] as NostrEvent;
 
     try {
-      const conversationKey = nip44.getConversationKey(clientSecretKey, event.pubkey);
-      const plaintext = nip44.decrypt(event.content, conversationKey);
+      const plaintext = decryptAck(clientSecretKey, event);
       const data = JSON.parse(plaintext);
       if (data.result === session.secret) {
         return event.pubkey;

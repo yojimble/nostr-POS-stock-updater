@@ -143,8 +143,10 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   const startQrSession = () => {
     qrAbortRef.current?.abort();
 
-    const relay = config.relayUrls.filter(Boolean)[0] ?? 'wss://relay.damus.io';
-    const { session, clientSecretKey } = createNostrConnectSession(relay, 'Nostr Stock Updater');
+    // offer several relays so the signer can reach at least one of them
+    const relays = config.relayUrls.filter(Boolean).slice(0, 3);
+    if (!relays.length) relays.push('wss://relay.damus.io');
+    const { session, clientSecretKey } = createNostrConnectSession(relays, 'Nostr Stock Updater');
 
     setQrSession(session);
     setQrStatus('waiting');
@@ -159,7 +161,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
         clearTimeout(timeout);
         if (qrAbortRef.current !== abort) return;
         const nsec = nip19.nsecEncode(clientSecretKey);
-        login.nostrConnect(remotePubkey, remotePubkey, nsec, [relay]);
+        login.nostrConnect(remotePubkey, remotePubkey, nsec, relays);
         setQrStatus('connected');
         onLogin();
         onClose();
