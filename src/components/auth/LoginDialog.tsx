@@ -189,11 +189,11 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
     const timeout = setTimeout(() => abort.abort(), 3 * 60 * 1000);
 
     waitForNostrConnectAck(nostr, clientSecretKey, session, abort.signal)
-      .then((remotePubkey) => {
+      .then(async (remotePubkey) => {
         clearTimeout(timeout);
         if (qrAbortRef.current !== abort) return;
         const nsec = nip19.nsecEncode(clientSecretKey);
-        login.nostrConnect(remotePubkey, remotePubkey, nsec, relays);
+        await login.nostrConnect(remotePubkey, nsec, relays);
         setQrStatus('connected');
         onLogin();
         onClose();
