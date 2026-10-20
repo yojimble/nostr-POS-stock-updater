@@ -1,4 +1,6 @@
 import { useNostr } from '@nostrify/react';
+import { NConnectSigner, NSecSigner } from '@nostrify/nostrify';
+import { nip19 } from 'nostr-tools';
 import { NLogin, useNostrLogin } from '@nostrify/react/login';
 
 // NOTE: This file should not be edited except for adding new login methods.
@@ -20,8 +22,18 @@ export function useLoginActions() {
       addLogin(login);
       setLogin(login.id);
     },
-    // Login from a completed client-initiated "nostrconnect://" pairing (e.g. Amber via QR)
-    nostrConnect(pubkey: string, bunkerPubkey: string, clientNsec: `nsec1${string}`, relays: string[]): void {
+    // Login from a completed client-initiated "nostrconnect://" pairing (e.g. Amber via QR).
+    // The key that answered the pairing is the signer's, not necessarily the user's, so
+    // ask it for the user's real public key and only save the login if it answers.
+    async nostrConnect(bunkerPubkey: string, clientNsec: `nsec1${string}`, relays: string[]): Promise<void> {
+      const clientSk = nip19.decode(clientNsec).data as Uint8Array;
+      const signer = new NConnectSigner({
+        relay: nostr.group(relays),
+        pubkey: bunkerPubkey,
+        signer: new NSecSigner(clientSk),
+        timeout: 30_000,
+      });
+      const pubkey = await signer.getPublicKey();
       const login = new NLogin('bunker', pubkey, { bunkerPubkey, clientNsec, relays });
       addLogin(login);
       setLogin(login.id);
