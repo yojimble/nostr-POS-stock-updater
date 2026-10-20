@@ -14,6 +14,7 @@ function randomSecret(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Do NOT add OWNER_APPROVAL_KIND (lib/ownerApproval.ts) here: logging out must stay a request the owner is asked about every time.
 const PERMS = [
   'sign_event:0',
   'sign_event:1',
