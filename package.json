@@ -10,6 +10,8 @@
     "deploy": "npm run build && npx -y nostr-deploy-cli deploy --skip-setup"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "@hookform/resolvers": "^3.9.0",
     "@nostrify/nostrify": "npm:@jsr/nostrify__nostrify@^0.46.4",
     "@nostrify/react": "npm:@jsr/nostrify__react@^0.2.8",
@@ -43,6 +45,7 @@
     "@tanstack/react-query": "^5.56.2",
     "@unhead/addons": "^2.0.10",
     "@unhead/react": "^2.0.10",
+    "capacitor-plugin-nostr-signer": "^0.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -67,6 +70,7 @@
     "zod": "^3.25.71"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "@eslint/js": "^9.9.0",
     "@html-eslint/eslint-plugin": "^0.41.0",
     "@html-eslint/parser": "^0.41.0",

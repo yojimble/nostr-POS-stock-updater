@@ -26,6 +26,12 @@ export function useLoginActions() {
       addLogin(login);
       setLogin(login.id);
     },
+    // Login through a NIP-55 signer app on this device (Android app only)
+    amber(pubkey: string, packageName: string): void {
+      const login = new NLogin('x-amber', pubkey, { packageName });
+      addLogin(login);
+      setLogin(login.id);
+    },
     // Login with a NIP-07 browser extension
     async extension(): Promise<void> {
       const login = await NLogin.fromExtension();
