@@ -305,11 +305,11 @@ export default function PosPage() {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-6 pb-40 space-y-5">
+    <div className="w-full max-w-3xl mx-auto px-4 pt-3 pb-40 space-y-3">
       <NavTabs />
 
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">Point of Sale</h1>
+      <div className="flex h-10 items-center justify-end gap-4">
+        <h1 className="sr-only">Point of Sale</h1>
         <div className="flex items-center gap-2">
           <div className="flex items-center rounded-md border p-0.5">
             <Button

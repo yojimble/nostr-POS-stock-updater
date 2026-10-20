@@ -135,11 +135,11 @@ export default function ListingsPage() {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-6 pb-32 space-y-5">
+    <div className="w-full max-w-3xl mx-auto px-4 pt-3 pb-32 space-y-3">
       <NavTabs />
 
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">Inventory</h1>
+      <div className="flex h-10 items-center justify-end gap-4">
+        <h1 className="sr-only">Inventory</h1>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -160,11 +160,11 @@ export default function ListingsPage() {
           variant={mode === 'add' ? 'default' : 'outline'}
           onClick={() => setMode('add')}
           className={cn(
-            'h-14 text-lg',
+            'h-10 text-base',
             mode === 'add' && 'bg-emerald-600 hover:bg-emerald-700 text-white',
           )}
         >
-          <Plus className="h-6 w-6 mr-2" />
+          <Plus className="h-5 w-5 mr-2" />
           Add
         </Button>
         <Button
@@ -172,11 +172,11 @@ export default function ListingsPage() {
           variant={mode === 'remove' ? 'default' : 'outline'}
           onClick={() => setMode('remove')}
           className={cn(
-            'h-14 text-lg',
+            'h-10 text-base',
             mode === 'remove' && 'bg-rose-600 hover:bg-rose-700 text-white',
           )}
         >
-          <Minus className="h-6 w-6 mr-2" />
+          <Minus className="h-5 w-5 mr-2" />
           Remove
         </Button>
       </div>

@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useNostrLogin } from '@nostrify/react/login';
 import { Boxes, ShoppingCart, Calculator } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -11,9 +12,10 @@ const tabs = [
 
 export function NavTabs() {
   const { pathname } = useLocation();
+  const { logins } = useNostrLogin();
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 pt-4">
+    <div className={cn('w-full max-w-3xl mx-auto px-4', logins.length === 0 ? 'pt-10' : 'pt-4')}>
       <div className="grid grid-cols-3 gap-1 rounded-md bg-muted p-1">
         {tabs.map(({ to, label, icon: Icon }) => {
           const active = pathname === to;
