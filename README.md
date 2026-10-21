@@ -85,17 +85,33 @@ The shop's key stays on the **owner's phone**, in a signer such as [Amber](https
 3. On your phone, scan the QR code with Amber. Amber lists what the till is asking to be allowed to do:
    - sign: profile (kind 0), notes (1), gift-wrapped receipts (13 and 1059), comments (1111), zap requests (9734) and listings (30402);
    - encrypt and decrypt with NIP-44.
-4. Approve it and **tick "remember my choice"** (Amber's wording may differ by version) so those actions are approved automatically from now on. Do not switch the till to a mode where Amber approves everything without asking, or the lock below stops working.
-5. **Allow the kinds Amber's "Basic actions" leaves out, before you hand the till over.** Basic actions covers profile (0), notes (1) and zap requests (9734), but not listings (30402), gift-wrapped receipts (13 and 1059) or comments (1111). Amber asks the first time the till signs each of those, so do each once yourself:
-   1. Stock update: on the **Inventory** tab tap **Add** on an item and press **Update**. When Amber asks to sign a classified listing, choose **always allow** and approve. Put the item's stock back afterwards if you like.
-   2. Sale with a receipt: ring up a small test sale on the till and send the customer receipt. If Amber asks to sign a seal or gift wrap, choose **always allow** and approve each.
-6. Ring up one more sale. It should complete with no prompt on your phone.
+4. Set up the permissions, using route A or route B below. Either way, the till must not end up in a mode where Amber approves everything without asking, or the lock below stops working.
+5. Ring up one more sale. It should complete with no prompt on your phone.
+
+#### Route A: "Basic actions", then a test run (recommended)
+
+Amber's "Basic actions" covers profile (kind 0), notes (1) and zap requests (9734), but not listings (30402), gift-wrapped receipts (13 and 1059) or comments (1111). Amber asks the first time the till signs each of those, so trigger each one yourself before handing the till over:
+
+1. When Amber shows the connection request, choose **Basic actions** and approve.
+2. On the till, open the **Inventory** tab, tap **Add** on one item and press **Update**. Amber asks to sign a classified listing. Choose **always allow** (Amber's wording may differ by version) and approve. Put the item's stock back afterwards if you like.
+3. On the till, ring up a small test sale and send the customer receipt. If Amber asks to sign a seal or a gift wrap, choose **always allow** and approve each one.
+4. Repeat steps 2 and 3 until nothing asks any more. Each kind only needs approving once.
+
+#### Route B: allow everything, then remove what you do not need
+
+If you would rather not hunt for prompts, you can approve everything when Amber shows the connection request, then trim the list:
+
+1. Approve the connection with every permission allowed.
+2. In Amber, open the permissions for this app and **switch off everything the app does not need**. Keep only the kinds in the permissions table below.
+3. Make sure no setting remains that approves every request automatically. The log-out lock needs Amber to ask about kind 22900 every time.
+
+Route B is quicker to set up, but it leaves a long list to check by hand. If you miss something, the till can sign more than it should. Route A grants only what the till actually uses.
 
 The till now works on its own. Keep your phone switched on and online during opening hours, and let Amber run in the background (turn off battery optimisation for it), or the till cannot get its signatures.
 
 ### Permissions the app asks for
 
-At first login the app asks your signer to allow the following. Approve them all and choose to remember the choice, so the till never interrupts a sale. Amber's "Basic actions" covers kinds 0, 1 and 9734 only, so the others are approved as in step 5 of the setup above.
+At first login the app asks your signer to allow the following. Approve them all and choose to remember the choice, so the till never interrupts a sale. Amber's "Basic actions" covers kinds 0, 1 and 9734 only, so the others are approved as in route A of the setup above.
 
 | Permission | Kind | Used for |
 | --- | --- | --- |
