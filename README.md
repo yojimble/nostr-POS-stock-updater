@@ -90,7 +90,27 @@ The shop's key stays on the **owner's phone**, in a signer such as [Amber](https
 
 The till now works on its own. Keep your phone switched on and online during opening hours, and let Amber run in the background (turn off battery optimisation for it), or the till cannot get its signatures.
 
-### Staff trying to switch accounts
+### Permissions the app asks for
+
+At first login the app asks your signer to allow the following. Approve them all and choose to remember the choice, so the till never interrupts a sale.
+
+| Permission | Kind | Used for |
+| --- | --- | --- |
+| Sign profile | 0 | Editing the shop profile |
+| Sign note | 1 | Requested for notes. No current feature uses it |
+| Sign gift-wrapped receipt (seal) | 13 | Sending a customer their receipt |
+| Sign gift wrap | 1059 | Sending a customer their receipt |
+| Sign comment | 1111 | Comments on a listing |
+| Sign zap request | 9734 | Charging a payment |
+| Sign classified listing | 30402 | Updating stock and editing listings |
+| NIP-44 encrypt | | Encrypting a customer's receipt |
+| NIP-44 decrypt | | Requested alongside encrypt. No current feature uses it |
+
+Amber's wording for these kinds varies by version. If a sale or stock update still asks you to approve a kind from this list, open that app's permissions in Amber and set that kind to always allow.
+
+### Log out, switch account and add account
+
+These three are **not** in the permission list above, on purpose, and each asks the owner's signer for approval every time.
 
 The till's account menu offers **Switch account**, **Add another account** and **Log out**. None of them work on their own. Each one asks your Amber to sign a short request (event kind 22900, "Approve: log out on a staff device"):
 
