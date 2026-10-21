@@ -86,14 +86,16 @@ The shop's key stays on the **owner's phone**, in a signer such as [Amber](https
    - sign: profile (kind 0), notes (1), gift-wrapped receipts (13 and 1059), comments (1111), zap requests (9734) and listings (30402);
    - encrypt and decrypt with NIP-44.
 4. Approve it and **tick "remember my choice"** (Amber's wording may differ by version) so those actions are approved automatically from now on. Do not switch the till to a mode where Amber approves everything without asking, or the lock below stops working.
-5. **Allow listing updates before you hand the till over.** Amber's "Basic actions" does not cover listings, so Amber would ask on every stock update. **Sign classified listing** (kind 30402) is a permission in Amber, so set it to **always allow**: do one stock update on the **Inventory** tab (tap **Add** on an item, press **Update**), and when Amber asks, choose always allow and approve. Put the item's stock back afterwards if you like.
-6. Ring up a test sale on the till. It should complete with no prompt on your phone.
+5. **Allow the kinds Amber's "Basic actions" leaves out, before you hand the till over.** Basic actions covers profile (0), notes (1) and zap requests (9734), but not listings (30402), gift-wrapped receipts (13 and 1059) or comments (1111). Amber asks the first time the till signs each of those, so do each once yourself:
+   1. Stock update: on the **Inventory** tab tap **Add** on an item and press **Update**. When Amber asks to sign a classified listing, choose **always allow** and approve. Put the item's stock back afterwards if you like.
+   2. Sale with a receipt: ring up a small test sale on the till and send the customer receipt. If Amber asks to sign a seal or gift wrap, choose **always allow** and approve each.
+6. Ring up one more sale. It should complete with no prompt on your phone.
 
 The till now works on its own. Keep your phone switched on and online during opening hours, and let Amber run in the background (turn off battery optimisation for it), or the till cannot get its signatures.
 
 ### Permissions the app asks for
 
-At first login the app asks your signer to allow the following. Approve them all and choose to remember the choice, so the till never interrupts a sale. Listings (30402) are not part of Amber's "Basic actions", so approve them as in step 5 of the setup above.
+At first login the app asks your signer to allow the following. Approve them all and choose to remember the choice, so the till never interrupts a sale. Amber's "Basic actions" covers kinds 0, 1 and 9734 only, so the others are approved as in step 5 of the setup above.
 
 | Permission | Kind | Used for |
 | --- | --- | --- |
