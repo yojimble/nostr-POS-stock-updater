@@ -283,7 +283,7 @@ export default function PosPage() {
         }
       }
       toast.success('Payment received — order complete.');
-      if (failed) toast.error(`${failed} item${failed === 1 ? '' : 's'} failed to update inventory.`);
+      if (failed) toast.error(`Payment taken, but stock for ${failed} item${failed === 1 ? '' : 's'} was not updated. Fix it on the Inventory tab.`);
 
       // Patch the cache with the events we just published so the UI reflects the
       // new stock immediately, rather than waiting on a relay refetch to catch up
@@ -401,8 +401,9 @@ export default function PosPage() {
 
       {!isLoading && !isError && listings && listings.length === 0 && (
         <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No listings found.
+          <CardContent className="py-10 text-center text-sm text-muted-foreground space-y-3">
+            <p>No listings found. The relays may not have replied.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>Reload</Button>
           </CardContent>
         </Card>
       )}

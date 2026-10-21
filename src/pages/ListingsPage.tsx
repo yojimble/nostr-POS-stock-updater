@@ -114,6 +114,8 @@ export default function ListingsPage() {
 
     let ok = 0;
     let failed = 0;
+    // taps for listings that fail to publish stay in place so the merchant can press Update again
+    const unsaved: Record<string, number> = {};
     for (const ev of targets) {
       const d = tagValue(ev.tags, 'd')!;
       const delta = pending[d] ?? 0;
@@ -125,12 +127,13 @@ export default function ListingsPage() {
       } catch (err) {
         console.error('update failed for', d, err);
         failed++;
+        unsaved[d] = delta;
       }
     }
 
     if (ok) toast.success(`Updated ${ok} listing${ok === 1 ? '' : 's'}.`);
-    if (failed) toast.error(`${failed} listing${failed === 1 ? '' : 's'} failed to publish.`);
-    setPending({});
+    if (failed) toast.error(`${failed} listing${failed === 1 ? '' : 's'} not saved, check your connection and press Update again.`);
+    setPending(unsaved);
     await queryClient.invalidateQueries({ queryKey: ['nip99-listings'] });
   };
 
@@ -201,8 +204,9 @@ export default function ListingsPage() {
 
       {!isLoading && !isError && listings && listings.length === 0 && (
         <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No listings found.
+          <CardContent className="py-10 text-center text-sm text-muted-foreground space-y-3">
+            <p>No listings found. The relays may not have replied.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>Reload</Button>
           </CardContent>
         </Card>
       )}
