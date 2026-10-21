@@ -98,6 +98,8 @@ The till's account menu offers **Switch account**, **Add another account** and *
 - Approve: the till does what was asked.
 - Reject, or no answer: nothing changes and the till shows "Not approved".
 
+Amber shows this as **kind 22900** with the text "report missing event kind translation", because it has no name for that kind. That is expected. Open the drop-down menu on Amber's request to read the memo, which says which action the till is asking for ("Approve: log out on a staff device", "Approve: switch account on a staff device" or "Approve: add account on a staff device"). Approve it only if you know why the till is asking.
+
 That request is **not** in the permissions you approved at setup, and it is never published. Do not tick "remember my choice" for it. If you do, Amber will approve it automatically and staff can log out freely.
 
 ### Taking a till out of service
