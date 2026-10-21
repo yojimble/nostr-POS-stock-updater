@@ -86,9 +86,7 @@ The shop's key stays on the **owner's phone**, in a signer such as [Amber](https
    - sign: profile (kind 0), notes (1), gift-wrapped receipts (13 and 1059), comments (1111), zap requests (9734) and listings (30402);
    - encrypt and decrypt with NIP-44.
 4. Approve it and **tick "remember my choice"** (Amber's wording may differ by version) so those actions are approved automatically from now on. Do not switch the till to a mode where Amber approves everything without asking, or the lock below stops working.
-5. **Approve listing updates once, before you hand the till over.** Amber's "Basic actions" does not cover listings (kind 30402), so Amber asks the first time the till updates stock. On the **Inventory** tab:
-   1. Tap **Add** on one item, then press **Update**. Amber asks to sign a classified listing. Set it to **always allow** and approve.
-   2. Tap **Remove** on the same item, then press **Update**. This puts the stock back. Amber should not ask again. If it does, set it to always allow again.
+5. **Allow listing updates before you hand the till over.** Amber's "Basic actions" does not cover listings, so Amber would ask on every stock update. **Sign classified listing** (kind 30402) is a permission in Amber, so set it to **always allow**: do one stock update on the **Inventory** tab (tap **Add** on an item, press **Update**), and when Amber asks, choose always allow and approve. You can also set it ahead of time in Amber's permissions for this app. Put the item's stock back afterwards if you like.
 6. Ring up a test sale on the till. It should complete with no prompt on your phone.
 
 The till now works on its own. Keep your phone switched on and online during opening hours, and let Amber run in the background (turn off battery optimisation for it), or the till cannot get its signatures.
