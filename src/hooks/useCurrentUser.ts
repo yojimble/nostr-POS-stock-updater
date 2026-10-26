@@ -3,6 +3,7 @@ import { useNostr } from '@nostrify/react';
 import { useCallback, useMemo } from 'react';
 
 import { useAuthor } from './useAuthor.ts';
+import { AmberSigner } from '@/lib/amberSigner';
 
 export function useCurrentUser() {
   const { nostr } = useNostr();
@@ -16,6 +17,8 @@ export function useCurrentUser() {
         return NUser.fromBunkerLogin(login, nostr);
       case 'extension': // Nostr login with NIP-07 browser extension
         return NUser.fromExtensionLogin(login);
+      case 'x-amber': // Android app: NIP-55 signer app such as Amber
+        return new NUser('x-amber', login.pubkey, new AmberSigner((login.data as { packageName: string }).packageName, login.pubkey));
       // Other login types can be defined here
       default:
         throw new Error(`Unsupported login type: ${login.type}`);

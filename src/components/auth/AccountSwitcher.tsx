@@ -1,7 +1,7 @@
 // NOTE: This file is stable and usually should not be modified.
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
-import { ChevronDown, LogOut, UserIcon, UserPlus } from 'lucide-react';
+import { ChevronDown, LogOut, Settings, UserIcon, UserPlus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx';
 import { useLoggedInAccounts, type Account } from '@/hooks/useLoggedInAccounts';
 import { genUserName } from '@/lib/genUserName';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { requireOwnerApproval, type OwnerAction } from '@/lib/ownerApproval';
+import { toast } from 'sonner';
+import { useSettingsSheet } from '@/contexts/SettingsSheetContext';
 
 interface AccountSwitcherProps {
   onAddAccountClick: () => void;
@@ -19,6 +23,23 @@ interface AccountSwitcherProps {
 
 export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
   const { currentUser, otherUsers, setLogin, removeLogin } = useLoggedInAccounts();
+  const { user } = useCurrentUser();
+  const { openSettings } = useSettingsSheet();
+
+  // Changing who is logged in needs the owner to approve it in their signer (Amber),
+  // so staff on a till can't do it on their own.
+  const withOwnerApproval = async (action: OwnerAction, then: () => void) => {
+    if (!user) return;
+    const waiting = toast.loading('Waiting for the owner to approve in their signer…');
+    try {
+      await requireOwnerApproval(user.signer, action);
+      toast.dismiss(waiting);
+      then();
+    } catch (err) {
+      toast.dismiss(waiting);
+      toast.error(err instanceof Error ? `Not approved: ${err.message}` : 'Not approved.');
+    }
+  };
 
   if (!currentUser) return null;
 
@@ -41,11 +62,19 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className='w-56 p-2 animate-scale-in'>
+        <DropdownMenuItem
+          onClick={openSettings}
+          className='flex items-center gap-2 cursor-pointer p-2 rounded-md'
+        >
+          <Settings className='w-4 h-4' />
+          <span>Settings</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <div className='font-medium text-sm px-2 py-1.5'>Switch Account</div>
         {otherUsers.map((user) => (
           <DropdownMenuItem
             key={user.id}
-            onClick={() => setLogin(user.id)}
+            onClick={() => withOwnerApproval('switch account', () => setLogin(user.id))}
             className='flex items-center gap-2 cursor-pointer p-2 rounded-md'
           >
             <Avatar className='w-8 h-8'>
@@ -60,14 +89,14 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={onAddAccountClick}
+          onClick={() => withOwnerApproval('add account', onAddAccountClick)}
           className='flex items-center gap-2 cursor-pointer p-2 rounded-md'
         >
           <UserPlus className='w-4 h-4' />
           <span>Add another account</span>
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => removeLogin(currentUser.id)}
+          onClick={() => withOwnerApproval('log out', () => removeLogin(currentUser.id))}
           className='flex items-center gap-2 cursor-pointer p-2 rounded-md text-red-500'
         >
           <LogOut className='w-4 h-4' />

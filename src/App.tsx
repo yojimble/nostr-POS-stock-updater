@@ -9,16 +9,20 @@ import NostrProvider from '@/components/NostrProvider';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { NostrLoginProvider } from '@nostrify/react/login';
+import { NostrLoginProvider, useNostrLogin } from '@nostrify/react/login';
 import { AppProvider } from '@/components/AppProvider';
 import { AppConfig } from '@/contexts/AppContext';
 import AppRouter from './AppRouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Settings } from 'lucide-react';
+import { Settings, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppContext } from '@/hooks/useAppContext';
+import { cn } from '@/lib/utils';
+import { useUserRelayList } from '@/hooks/useUserRelayList';
+import { SettingsSheetContext } from '@/contexts/SettingsSheetContext';
+import { useAndroidBackButton } from '@/hooks/useAndroidBackButton';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -58,35 +62,38 @@ const presetRelays = [
 function AppContent() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { config, updateConfig } = useAppContext();
+  const { logins } = useNostrLogin();
+  useAndroidBackButton();
 
-  // Initialize relay inputs from current config or defaults
-  const [relayInput1, setRelayInput1] = useState(config.relayUrls[0] || "wss://relay.damus.io");
-  const [relayInput2, setRelayInput2] = useState(config.relayUrls[1] || "wss://relay.plebeian.market");
-  const [relayInput3, setRelayInput3] = useState(config.relayUrls[2] || "wss://nos.lol");
-  const [relayInput4, setRelayInput4] = useState(config.relayUrls[3] || "");
+  // One box per relay; the list grows and shrinks to fit
+  const [relayInputs, setRelayInputs] = useState<string[]>(
+    config.relayUrls.length ? config.relayUrls : ['wss://relay.damus.io'],
+  );
   const [anonymousZaps, setAnonymousZaps] = useLocalStorage<boolean>(ANON_ZAPS_KEY, false);
+
+  const { data: myRelays, isLoading: myRelaysLoading } = useUserRelayList();
+
+  // Fill the relay boxes from the user's NIP-65 list (not saved until "Save changes")
+  const applyMyRelays = () => {
+    const urls = (myRelays ?? []).map((r) => r.url);
+    if (urls.length) setRelayInputs(urls);
+  };
+
+  const updateRelayInput = (index: number, value: string) =>
+    setRelayInputs((prev) => prev.map((url, i) => (i === index ? value : url)));
 
   const handleSaveRelay = () => {
     const newRelayUrls: string[] = [];
 
-    const validateAndAddRelay = (url: string) => {
-      if (url.startsWith("wss://")) {
-        newRelayUrls.push(url);
-        return true;
-      } else if (url !== "") {
+    for (const raw of relayInputs) {
+      const url = raw.trim();
+      if (url === '') continue; // empty boxes are ignored
+      if (!url.startsWith('wss://')) {
         toast.error(`Invalid relay URL: ${url}. Must start with wss://`);
-        return false;
+        return;
       }
-      return true; // Allow empty string, just don't add it
-    };
-
-    let allValid = true;
-    if (!validateAndAddRelay(relayInput1)) allValid = false;
-    if (!validateAndAddRelay(relayInput2)) allValid = false;
-    if (!validateAndAddRelay(relayInput3)) allValid = false;
-    if (!validateAndAddRelay(relayInput4)) allValid = false;
-
-    if (!allValid) return;
+      if (!newRelayUrls.includes(url)) newRelayUrls.push(url);
+    }
 
     if (newRelayUrls.length === 0) {
       toast.error("Please enter at least one valid relay URL.");
@@ -98,75 +105,79 @@ function AppContent() {
     setIsSettingsOpen(false);
   };
 
+  // Signed out: centre the sign-in card. Signed in: pin every tab to the top so the tab bar does not jump between tabs.
   return (
-    <div className="flex-grow flex items-center justify-center"> {/* Removed min-h-screen */}
-      <AppRouter />
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed bottom-4 right-4 rounded-full shadow-lg z-50"
-        onClick={() => setIsSettingsOpen(true)}
-      >
-        <Settings className="h-5 w-5" />
-      </Button>
+    <div className={cn("flex-grow flex justify-center", logins.length === 0 ? "items-center" : "items-start")}>
+      <SettingsSheetContext.Provider value={{ openSettings: () => setIsSettingsOpen(true) }}>
+        <AppRouter />
+      </SettingsSheetContext.Provider>
+      {/* Signed in, settings live in the profile picture's menu; signed out there is no picture */}
+      {logins.length === 0 && (
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Settings"
+          className="fixed top-1 right-2 h-8 w-8 rounded-full shadow-md z-50 mt-[env(safe-area-inset-top)]"
+          onClick={() => setIsSettingsOpen(true)}
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      )}
 
       <Sheet open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <SheetContent>
+        {/* don't focus the first relay box on open: it selects the text and raises the keyboard */}
+        <SheetContent onOpenAutoFocus={(e) => e.preventDefault()}>
           <SheetHeader>
             <SheetTitle>Settings</SheetTitle>
             <SheetDescription>
               Choose your preferred relays.
             </SheetDescription>
           </SheetHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="relayUrl1" className="text-right col-span-1">
-                Relay 1
-              </label>
-              <Input
-                id="relayUrl1"
-                value={relayInput1}
-                onChange={(e) => setRelayInput1(e.target.value)}
-                className="col-span-3"
-                placeholder="wss://nos.lol"
-              />
+          {(myRelaysLoading || (myRelays && myRelays.length > 0)) && (
+            <div className="space-y-2 pt-2">
+              <p className="text-sm font-medium">Your relays (NIP-65)</p>
+              {myRelaysLoading ? (
+                <p className="text-xs text-muted-foreground">Looking up your relay list…</p>
+              ) : (
+                <>
+                  <ul className="text-xs text-muted-foreground space-y-0.5">
+                    {myRelays!.map((r) => (
+                      <li key={r.url} className="truncate">
+                        {r.url}
+                        {r.mode !== 'both' && ` (${r.mode})`}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button variant="outline" size="sm" onClick={applyMyRelays}>
+                    Use my relays
+                  </Button>
+                </>
+              )}
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="relayUrl2" className="text-right col-span-1">
-                Relay 2
-              </label>
-              <Input
-                id="relayUrl2"
-                value={relayInput2}
-                onChange={(e) => setRelayInput2(e.target.value)}
-                className="col-span-3"
-                placeholder="wss://relay.primal.net"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="relayUrl3" className="text-right col-span-1">
-                Relay 3
-              </label>
-              <Input
-                id="relayUrl3"
-                value={relayInput3}
-                onChange={(e) => setRelayInput3(e.target.value)}
-                className="col-span-3"
-                placeholder="wss://nos.lol"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="relayUrl4" className="text-right col-span-1">
-                Relay 4
-              </label>
-              <Input
-                id="relayUrl4"
-                value={relayInput4}
-                onChange={(e) => setRelayInput4(e.target.value)}
-                className="col-span-3"
-                placeholder="wss://your-custom-relay.com"
-              />
-            </div>
+          )}
+          <div className="grid gap-3 py-4 px-2 -mx-2 max-h-[50vh] overflow-y-auto">
+            {relayInputs.map((url, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <Input
+                  aria-label={`Relay ${index + 1}`}
+                  value={url}
+                  onChange={(e) => updateRelayInput(index, e.target.value)}
+                  placeholder="wss://your-relay.com"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Remove relay ${index + 1}`}
+                  disabled={relayInputs.length === 1}
+                  onClick={() => setRelayInputs((prev) => prev.filter((_, i) => i !== index))}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" onClick={() => setRelayInputs((prev) => [...prev, ''])}>
+              Add relay
+            </Button>
           </div>
           <div className="flex justify-end">
             <Button onClick={handleSaveRelay}>Save changes</Button>
@@ -196,6 +207,20 @@ function AppContent() {
   );
 }
 
+// The credit only shows on the signed-out screen; once someone is logged in it is out of the way.
+function CreditFooter() {
+  const { logins } = useNostrLogin();
+  if (logins.length > 0) return null;
+
+  return (
+    <div className="text-center text-xs text-muted-foreground mt-8 mb-4"> {/* Footer */}
+      <p>
+        Vibecoded with love by <a href="https://njump.me/yojimble@getalby.com" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: '#ff07a9' }}>Yojimble</a> using <a href="https://soapbox.pub/mkstack" target="_blank" rel="noopener noreferrer" className="underline">MKStack</a>
+      </p>
+    </div>
+  );
+}
+
 export function App() {
   return (
     <UnheadProvider head={head}>
@@ -210,16 +235,12 @@ export function App() {
                   <Suspense>
                     <AppContent /> {/* Render AppContent here */}
                   </Suspense>
+                  <CreditFooter />
                 </TooltipProvider>
               </NostrProvider>
             </NostrLoginProvider>
           </QueryClientProvider>
         </AppProvider>
-        <div className="text-center text-xs text-muted-foreground mt-8 mb-4"> {/* Footer */}
-          <p>
-            Vibecoded with love by <a href="https://njump.me/yojimble@getalby.com" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: '#ff07a9' }}>Yojimble</a> using <a href="https://soapbox.pub/mkstack" target="_blank" rel="noopener noreferrer" className="underline">MKStack</a>
-          </p>
-        </div>
       </div>
     </UnheadProvider>
   );

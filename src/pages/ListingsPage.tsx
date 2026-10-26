@@ -57,7 +57,7 @@ function withUpdatedStock(tags: string[][], newQty: number): string[][] {
 
 export default function ListingsPage() {
   const { user } = useCurrentUser();
-  const { data: listings, isLoading, isError, refetch } = useUserListings();
+  const { data: listings, isLoading, isFetching, isError, refetch } = useUserListings();
   const { mutateAsync: publishEvent, isPending: isPublishing } = useNostrPublish();
   const queryClient = useQueryClient();
 
@@ -114,6 +114,8 @@ export default function ListingsPage() {
 
     let ok = 0;
     let failed = 0;
+    // taps for listings that fail to publish stay in place so the merchant can press Update again
+    const unsaved: Record<string, number> = {};
     for (const ev of targets) {
       const d = tagValue(ev.tags, 'd')!;
       const delta = pending[d] ?? 0;
@@ -125,21 +127,22 @@ export default function ListingsPage() {
       } catch (err) {
         console.error('update failed for', d, err);
         failed++;
+        unsaved[d] = delta;
       }
     }
 
     if (ok) toast.success(`Updated ${ok} listing${ok === 1 ? '' : 's'}.`);
-    if (failed) toast.error(`${failed} listing${failed === 1 ? '' : 's'} failed to publish.`);
-    setPending({});
+    if (failed) toast.error(`${failed} listing${failed === 1 ? '' : 's'} not saved, check your connection and press Update again.`);
+    setPending(unsaved);
     await queryClient.invalidateQueries({ queryKey: ['nip99-listings'] });
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-6 pb-32 space-y-5">
+    <div className="w-full max-w-3xl mx-auto px-4 pt-3 pb-32 space-y-4">
       <NavTabs />
 
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">Inventory</h1>
+      <div className="flex h-12 items-center justify-end gap-4">
+        <h1 className="sr-only">Inventory</h1>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -148,7 +151,7 @@ export default function ListingsPage() {
             title="Refresh"
             disabled={isLoading}
           >
-            <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
           </Button>
           <LoginArea />
         </div>
@@ -160,11 +163,11 @@ export default function ListingsPage() {
           variant={mode === 'add' ? 'default' : 'outline'}
           onClick={() => setMode('add')}
           className={cn(
-            'h-14 text-lg',
+            'h-10 text-base',
             mode === 'add' && 'bg-emerald-600 hover:bg-emerald-700 text-white',
           )}
         >
-          <Plus className="h-6 w-6 mr-2" />
+          <Plus className="h-5 w-5 mr-2" />
           Add
         </Button>
         <Button
@@ -172,11 +175,11 @@ export default function ListingsPage() {
           variant={mode === 'remove' ? 'default' : 'outline'}
           onClick={() => setMode('remove')}
           className={cn(
-            'h-14 text-lg',
+            'h-10 text-base',
             mode === 'remove' && 'bg-rose-600 hover:bg-rose-700 text-white',
           )}
         >
-          <Minus className="h-6 w-6 mr-2" />
+          <Minus className="h-5 w-5 mr-2" />
           Remove
         </Button>
       </div>
@@ -194,15 +197,22 @@ export default function ListingsPage() {
           <CardContent className="py-10 text-center space-y-3">
             <AlertCircle className="mx-auto h-6 w-6 text-destructive" />
             <p className="text-sm">Failed to load listings.</p>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>Try again</Button>
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+              <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
+              Try again
+            </Button>
           </CardContent>
         </Card>
       )}
 
       {!isLoading && !isError && listings && listings.length === 0 && (
         <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No listings found.
+          <CardContent className="py-10 text-center text-sm text-muted-foreground space-y-3">
+            <p>No listings found. The relays may not have replied.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+              <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
+              Reload
+            </Button>
           </CardContent>
         </Card>
       )}

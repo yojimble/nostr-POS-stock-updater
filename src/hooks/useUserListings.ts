@@ -1,24 +1,27 @@
 import { useNostr } from '@nostrify/react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NostrEvent } from '@nostrify/nostrify';
 
 import { useAppContext } from './useAppContext';
 import { useCurrentUser } from './useCurrentUser';
 import { queryRelays } from '@/lib/queryRelays';
+import { relaysForUserEvents } from './useUserRelayList';
 
 export function useUserListings() {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const { config } = useAppContext();
+  const queryClient = useQueryClient();
 
   return useQuery<NostrEvent[]>({
     queryKey: ['nip99-listings', user?.pubkey ?? ''],
     enabled: !!user?.pubkey,
     queryFn: async ({ signal }) => {
+      const relays = await relaysForUserEvents(queryClient, nostr, user!.pubkey, config.relayUrls);
       const events = await queryRelays(
         nostr,
         [{ kinds: [30402], authors: [user!.pubkey], limit: 500 }],
-        config.relayUrls.filter(Boolean),
+        relays,
         { signal },
       );
 

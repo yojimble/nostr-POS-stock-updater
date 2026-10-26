@@ -2,7 +2,7 @@
 // It is important that all functionality in this file is preserved, and should only be modified if explicitly requested.
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, AlertTriangle, Cloud, QrCode, Loader2, RotateCcw } from 'lucide-react';
+import { Shield, AlertTriangle, Cloud, QrCode, Loader2, RotateCcw, Copy, Check, ExternalLink } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useNostr } from '@nostrify/react';
 import { nip19 } from 'nostr-tools';
@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLoginActions } from '@/hooks/useLoginActions';
 import { useAppContext } from '@/hooks/useAppContext';
 import { createNostrConnectSession, waitForNostrConnectAck, type NostrConnectSession } from '@/lib/nostrConnect';
+import { amberGetPublicKey, findSignerPackage, isAndroidApp } from '@/lib/amberSigner';
 import { cn } from '@/lib/utils';
 
 interface LoginDialogProps {
@@ -140,6 +141,37 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
     }
   };
 
+  const [uriCopied, setUriCopied] = useState(false);
+  const copyQrUri = async () => {
+    if (!qrSession) return;
+    try {
+      await navigator.clipboard.writeText(qrSession.uri);
+      setUriCopied(true);
+      setTimeout(() => setUriCopied(false), 2000);
+    } catch {
+      // clipboard blocked: the Open in Amber link still works
+    }
+  };
+
+  // Android app: ask the Amber app on this device directly (NIP-55), no QR needed
+  const handleAmberAppLogin = async () => {
+    setIsLoading(true);
+    setQrStatus('idle');
+    setQrError('');
+    try {
+      const packageName = await findSignerPackage();
+      const pubkey = await amberGetPublicKey(packageName);
+      login.amber(pubkey, packageName);
+      onLogin();
+      onClose();
+    } catch (err) {
+      setQrStatus('error');
+      setQrError(err instanceof Error ? err.message : 'Amber login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const startQrSession = () => {
     qrAbortRef.current?.abort();
 
@@ -185,7 +217,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
     }
   };
 
-  const defaultTab = hasExtension ? 'extension' : 'bunker';
+  const defaultTab = isAndroidApp() ? 'qr' : hasExtension ? 'extension' : 'bunker';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -278,9 +310,21 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                   <AlertDescription>{qrError}</AlertDescription>
                 </Alert>
               )}
+              {isAndroidApp() && (
               <div className='text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800 space-y-3'>
                 <p className='text-sm text-gray-600 dark:text-gray-300'>
-                  Scan with Amber (or another Nostr Connect signer)
+                  Shop owner using this phone: log in with the Amber app installed on it
+                </p>
+                <Button className='w-full rounded-full py-4' onClick={handleAmberAppLogin} disabled={isLoading}>
+                  {isLoading ? 'Waiting for Amber…' : 'Login with Amber on this phone'}
+                </Button>
+              </div>
+              )}
+              <div className='text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800 space-y-3'>
+                <p className='text-sm text-gray-600 dark:text-gray-300'>
+                  {isAndroidApp()
+                    ? "Staff device: scan with the owner's Amber on another phone"
+                    : 'Scan with Amber (or another Nostr Connect signer)'}
                 </p>
 
                 {qrSession && (qrStatus === 'waiting' || qrStatus === 'connected') && (
@@ -290,6 +334,21 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                         <QRCodeSVG value={qrSession.uri} size={200} />
                       </div>
                     </div>
+                    {qrStatus === 'waiting' && !isAndroidApp() && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">Amber on this device? Open it directly:</p>
+                        <Button asChild className="w-full rounded-full py-4">
+                          <a href={qrSession.uri}>
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Open in Amber
+                          </a>
+                        </Button>
+                        <Button variant="outline" className="w-full rounded-full py-4" onClick={copyQrUri}>
+                          {uriCopied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                          {uriCopied ? 'Copied' : 'Copy connection link'}
+                        </Button>
+                      </div>
+                    )}
                     <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
                       {qrStatus === 'waiting' ? (
                         <>

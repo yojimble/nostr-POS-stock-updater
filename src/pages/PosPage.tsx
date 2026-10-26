@@ -106,7 +106,7 @@ interface CartLine {
 
 export default function PosPage() {
   const { user, metadata } = useCurrentUser();
-  const { data: listings, isLoading, isError, refetch } = useUserListings();
+  const { data: listings, isLoading, isFetching, isError, refetch } = useUserListings();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { data: btcPrices } = useBtcPrice();
   const queryClient = useQueryClient();
@@ -283,7 +283,7 @@ export default function PosPage() {
         }
       }
       toast.success('Payment received — order complete.');
-      if (failed) toast.error(`${failed} item${failed === 1 ? '' : 's'} failed to update inventory.`);
+      if (failed) toast.error(`Payment taken, but stock for ${failed} item${failed === 1 ? '' : 's'} was not updated. Fix it on the Inventory tab.`);
 
       // Patch the cache with the events we just published so the UI reflects the
       // new stock immediately, rather than waiting on a relay refetch to catch up
@@ -305,11 +305,11 @@ export default function PosPage() {
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-6 pb-40 space-y-5">
+    <div className="w-full max-w-3xl mx-auto px-4 pt-3 pb-40 space-y-4">
       <NavTabs />
 
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">Point of Sale</h1>
+      <div className="flex h-12 items-center justify-end gap-4">
+        <h1 className="sr-only">Point of Sale</h1>
         <div className="flex items-center gap-2">
           <div className="flex items-center rounded-md border p-0.5">
             <Button
@@ -341,7 +341,7 @@ export default function PosPage() {
             {showHidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </Button>
           <Button variant="ghost" size="icon" onClick={() => refetch()} title="Refresh" disabled={isLoading}>
-            <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
           </Button>
           <LoginArea />
         </div>
@@ -394,15 +394,22 @@ export default function PosPage() {
           <CardContent className="py-10 text-center space-y-3">
             <AlertCircle className="mx-auto h-6 w-6 text-destructive" />
             <p className="text-sm">Failed to load listings.</p>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>Try again</Button>
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+              <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
+              Try again
+            </Button>
           </CardContent>
         </Card>
       )}
 
       {!isLoading && !isError && listings && listings.length === 0 && (
         <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No listings found.
+          <CardContent className="py-10 text-center text-sm text-muted-foreground space-y-3">
+            <p>No listings found. The relays may not have replied.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+              <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
+              Reload
+            </Button>
           </CardContent>
         </Card>
       )}

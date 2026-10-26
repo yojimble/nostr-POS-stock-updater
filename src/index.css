@@ -97,5 +97,7 @@
 
   body {
     @apply bg-background text-foreground;
+    /* keep content clear of the status bar and the Android navigation buttons */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 }

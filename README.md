@@ -74,6 +74,86 @@ The app avoids publishing at all where it can: once a wallet's `verify` endpoint
 
 Unless you turn on anonymous receipts, signing the zap request uses the shop's key — so set your signer to auto-approve **kind 9734** before handing the till to staff, or each charge waits on a manual approval nobody at the counter can give. Amber supports this per event kind; browser extensions have equivalent settings.
 
+## Setting up staff devices
+
+The shop's key stays on the **owner's phone**, in a signer such as [Amber](https://github.com/greenart7c3/Amber). Staff tills (the web app or the Android app) never hold the key. They ask the owner's signer to sign each action over Nostr Connect (NIP-46), so a till can ring up sales without the owner standing next to it, and it cannot sign anything the owner has not allowed.
+
+### One-time setup, by the owner
+
+1. Put the shop's key in Amber on your own phone. Do not install or log into Amber on a staff device.
+2. On the till, open the app and choose **Log in**, then the **Amber** tab. A QR code appears.
+3. On your phone, scan the QR code with Amber. Amber lists what the till is asking to be allowed to do:
+   - sign: profile (kind 0), notes (1), gift-wrapped receipts (13 and 1059), comments (1111), zap requests (9734) and listings (30402);
+   - encrypt and decrypt with NIP-44.
+4. Set up the permissions, using route A or route B below. Either way, the till must not end up in a mode where Amber approves everything without asking, or the lock below stops working.
+5. Ring up one more sale. It should complete with no prompt on your phone.
+
+#### Route A: "Basic actions", then a test run (recommended)
+
+Amber's "Basic actions" covers profile (kind 0), notes (1) and zap requests (9734), but not listings (30402), gift-wrapped receipts (13 and 1059) or comments (1111). Amber asks the first time the till signs each of those, so trigger each one yourself before handing the till over:
+
+1. When Amber shows the connection request, choose **Basic actions** and approve.
+2. On the till, open the **Inventory** tab, tap **Add** on one item and press **Update**. Amber asks to sign a classified listing. Choose **always allow** (Amber's wording may differ by version) and approve. Put the item's stock back afterwards if you like.
+3. On the till, ring up a small test sale and send the customer receipt. If Amber asks to sign a seal or a gift wrap, choose **always allow** and approve each one.
+4. Repeat steps 2 and 3 until nothing asks any more. Each kind only needs approving once.
+
+#### Route B: allow everything, then remove what you do not need
+
+If you would rather not hunt for prompts, you can approve everything when Amber shows the connection request, then trim the list:
+
+1. Approve the connection with every permission allowed.
+2. In Amber, open the permissions for this app and **switch off everything the app does not need**. Keep only the kinds in the permissions table below.
+3. Make sure no setting remains that approves every request automatically. The log-out lock needs Amber to ask about kind 22900 every time.
+
+Route B is quicker to set up, but it leaves a long list to check by hand. If you miss something, the till can sign more than it should. Route A grants only what the till actually uses.
+
+The till now works on its own. Keep your phone switched on and online during opening hours, and let Amber run in the background (turn off battery optimisation for it), or the till cannot get its signatures.
+
+### Permissions the app asks for
+
+At first login the app asks your signer to allow the following. Approve them all and choose to remember the choice, so the till never interrupts a sale. Amber's "Basic actions" covers kinds 0, 1 and 9734 only, so the others are approved as in route A of the setup above.
+
+| Permission | Kind | Used for |
+| --- | --- | --- |
+| Sign profile | 0 | Editing the shop profile |
+| Sign note | 1 | Requested for notes. No current feature uses it |
+| Sign gift-wrapped receipt (seal) | 13 | Sending a customer their receipt |
+| Sign gift wrap | 1059 | Sending a customer their receipt |
+| Sign comment | 1111 | Comments on a listing |
+| Sign zap request | 9734 | Charging a payment |
+| Sign classified listing | 30402 | Updating stock and editing listings |
+| NIP-44 encrypt | | Encrypting a customer's receipt |
+| NIP-44 decrypt | | Requested alongside encrypt. No current feature uses it |
+
+Amber's wording for these kinds varies by version. If a sale or stock update still asks you to approve a kind from this list, open that app's permissions in Amber and set that kind to always allow.
+
+### Log out, switch account and add account
+
+These three are **not** in the permission list above, on purpose, and each asks the owner's signer for approval every time.
+
+The till's account menu offers **Switch account**, **Add another account** and **Log out**. None of them work on their own. Each one asks your Amber to sign a short request (event kind 22900, "Approve: log out on a staff device"):
+
+- You get the alert on your phone and approve or reject it.
+- Approve: the till does what was asked.
+- Reject, or no answer: nothing changes and the till shows "Not approved".
+
+Amber shows this as **kind 22900** with the text "report missing event kind translation", because it has no name for that kind. That is expected. Open the drop-down menu on Amber's request to read the memo, which says which action the till is asking for ("Approve: log out on a staff device", "Approve: switch account on a staff device" or "Approve: add account on a staff device"). Approve it only if you know why the till is asking.
+
+That request is **not** in the permissions you approved at setup, and it is never published. Do not tick "remember my choice" for it. If you do, Amber will approve it automatically and staff can log out freely.
+
+### Taking a till out of service
+
+- **Revoke it from your phone:** remove the connected app in Amber. The till can no longer sign anything.
+- **Change who the till is logged in as:** revoke the old connection, then log in on the till again with a new QR code. If the old signer cannot be reached, clearing the app's data (Android settings, then the app, then Clear data) also resets it.
+- **If your phone is off or offline:** the approval request cannot be answered, so nobody can log out or switch. Sales also cannot be signed until your phone is back.
+
+### Android app
+
+The login screen in the Android app offers both ways in:
+
+- **Staff device:** scan the QR code with the owner's Amber on another phone (the setup above). Use this on every till that staff handle.
+- **Shop owner using this phone:** **Login with Amber on this phone** talks to an Amber installed on the same phone (NIP-55). Use it only if you run the shop yourself from one phone. On a staff device it would put the shop's key in staff hands, and the log-out approval would appear on the same phone, where staff could approve it themselves.
+
 ## Built with
 
 - [React 18](https://react.dev/) + [Vite](https://vitejs.dev/)
@@ -82,7 +162,11 @@ Unless you turn on anonymous receipts, signing the zap request uses the shop's k
 - [nostr-tools](https://github.com/nbd-wtf/nostr-tools) (NIP-17/NIP-44/NIP-46 primitives)
 - [qrcode.react](https://github.com/zpao/qrcode.react)
 - [vite-plugin-pwa](https://vite-pwa-org.netlify.app/)
-- [MKStack](https://soapbox.pub/mkstack) (scaffolding)
+- [Capacitor](https://capacitorjs.com/) + [capacitor-plugin-nostr-signer](https://github.com/hzrd149/capacitor-plugin-nostr-signer) (Android app, signs through Amber via NIP-55)
+
+## Credits
+
+This app started from [MKStack](https://soapbox.pub/mkstack), Soapbox's starter template for Nostr apps built with React, Tailwind, shadcn/ui and Nostrify.
 
 ## Getting started
 

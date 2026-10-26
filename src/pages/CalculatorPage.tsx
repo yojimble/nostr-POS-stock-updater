@@ -4,6 +4,7 @@ import { Delete, Zap } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { LoginArea } from '@/components/auth/LoginArea';
 import { NavTabs } from '@/components/NavTabs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -63,6 +64,7 @@ export default function CalculatorPage() {
   const [waitingForOperand, setWaitingForOperand] = useState(false);
   const [memo, setMemo] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [memoOpen, setMemoOpen] = useState(false);
   const [chargedAmount, setChargedAmount] = useState(0);
 
   useSeoMeta({
@@ -154,21 +156,20 @@ export default function CalculatorPage() {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-6 space-y-5">
+    <div className="w-full max-w-3xl mx-auto px-4 py-3 space-y-4">
       <NavTabs />
 
-      <div className="max-w-md mx-auto space-y-5">
+      <div className="max-w-md mx-auto space-y-4">
 
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">Calculator</h1>
+      <div className="flex h-12 items-center justify-between gap-4">
+        <h1 className="sr-only">Calculator</h1>
+        <p className="text-xs text-muted-foreground">
+          Charging in <span className="font-medium text-foreground">{currency}</span>, from your listing prices
+        </p>
         <LoginArea />
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Charging in <span className="font-medium text-foreground">{currency}</span> — based on your listing prices
-      </p>
-
-      <div className="rounded-lg border bg-muted/40 px-4 py-8 text-right">
+      <div className="rounded-lg border bg-muted/40 px-4 py-3 text-right">
         {operator && (
           <p className="text-sm text-muted-foreground truncate">
             {operand !== null ? formatResult(operand) : ''} {operator}
@@ -184,37 +185,31 @@ export default function CalculatorPage() {
         )}
       </div>
 
-      <Input
-        value={memo}
-        onChange={(e) => setMemo(e.target.value)}
-        placeholder="Add a memo (optional)"
-      />
-
       <div className="grid grid-cols-4 gap-2">
-        <Button variant="outline" className="h-16 text-lg font-medium" onClick={resetAll}>C</Button>
-        <Button variant="outline" className="h-16 text-lg font-medium" onClick={handleBackspace}>
+        <Button variant="outline" className="h-14 text-lg font-medium" onClick={resetAll}>C</Button>
+        <Button variant="outline" className="h-14 text-lg font-medium" onClick={handleBackspace}>
           <Delete className="h-5 w-5" />
         </Button>
-        <Button variant="outline" className="h-16 text-2xl font-medium col-span-2" onClick={() => handleOperator('÷')}>÷</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium col-span-2" onClick={() => handleOperator('÷')}>÷</Button>
 
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleDigit('7')}>7</Button>
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleDigit('8')}>8</Button>
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleDigit('9')}>9</Button>
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleOperator('×')}>×</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleDigit('7')}>7</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleDigit('8')}>8</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleDigit('9')}>9</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleOperator('×')}>×</Button>
 
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleDigit('4')}>4</Button>
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleDigit('5')}>5</Button>
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleDigit('6')}>6</Button>
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleOperator('-')}>−</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleDigit('4')}>4</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleDigit('5')}>5</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleDigit('6')}>6</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleOperator('-')}>−</Button>
 
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleDigit('1')}>1</Button>
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleDigit('2')}>2</Button>
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleDigit('3')}>3</Button>
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={() => handleOperator('+')}>+</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleDigit('1')}>1</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleDigit('2')}>2</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleDigit('3')}>3</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleOperator('+')}>+</Button>
 
-        <Button variant="outline" className="h-16 text-2xl font-medium col-span-2" onClick={() => handleDigit('0')}>0</Button>
-        <Button variant="outline" className="h-16 text-2xl font-medium" onClick={handleDecimal}>.</Button>
-        <Button className="h-16 text-2xl font-medium" onClick={handleEquals}>=</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium col-span-2" onClick={() => handleDigit('0')}>0</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={handleDecimal}>.</Button>
+        <Button className="h-14 text-2xl font-medium" onClick={handleEquals}>=</Button>
       </div>
 
       <Button
@@ -222,12 +217,44 @@ export default function CalculatorPage() {
         disabled={sats <= 0}
         onClick={() => {
           setChargedAmount(amount);
-          setDialogOpen(true);
+          setMemoOpen(true);
         }}
       >
         <Zap className="h-4 w-4 mr-2" />
         Charge
       </Button>
+
+      <Dialog open={memoOpen} onOpenChange={setMemoOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setMemoOpen(false);
+              setDialogOpen(true);
+            }}
+            className="space-y-4"
+          >
+            <DialogHeader>
+              <DialogTitle>
+                Charge {CURRENCY_SYMBOLS[currency] ?? ''}{chargedAmount.toLocaleString()}{isSats ? ' sats' : ''}
+              </DialogTitle>
+            </DialogHeader>
+            <Input
+              autoFocus
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              placeholder="Add a memo (optional)"
+            />
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => setMemoOpen(false)}>Cancel</Button>
+              <Button type="submit">
+                <Zap className="h-4 w-4 mr-2" />
+                Charge
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <PaymentDialog
         open={dialogOpen}
