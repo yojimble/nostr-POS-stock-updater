@@ -106,7 +106,7 @@ interface CartLine {
 
 export default function PosPage() {
   const { user, metadata } = useCurrentUser();
-  const { data: listings, isLoading, isError, refetch } = useUserListings();
+  const { data: listings, isLoading, isFetching, isError, refetch } = useUserListings();
   const { mutateAsync: publishEvent } = useNostrPublish();
   const { data: btcPrices } = useBtcPrice();
   const queryClient = useQueryClient();
@@ -341,7 +341,7 @@ export default function PosPage() {
             {showHidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </Button>
           <Button variant="ghost" size="icon" onClick={() => refetch()} title="Refresh" disabled={isLoading}>
-            <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
+            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
           </Button>
           <LoginArea />
         </div>
@@ -394,7 +394,10 @@ export default function PosPage() {
           <CardContent className="py-10 text-center space-y-3">
             <AlertCircle className="mx-auto h-6 w-6 text-destructive" />
             <p className="text-sm">Failed to load listings.</p>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>Try again</Button>
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+              <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
+              Try again
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -403,7 +406,10 @@ export default function PosPage() {
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground space-y-3">
             <p>No listings found. The relays may not have replied.</p>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>Reload</Button>
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+              <RefreshCw className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')} />
+              Reload
+            </Button>
           </CardContent>
         </Card>
       )}
