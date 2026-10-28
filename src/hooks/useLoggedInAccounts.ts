@@ -1,7 +1,11 @@
 import { useNostr } from '@nostrify/react';
 import { useNostrLogin } from '@nostrify/react/login';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { NSchema as n, NostrEvent, NostrMetadata } from '@nostrify/nostrify';
+
+import { useAppContext } from './useAppContext';
+import { queryRelays } from '@/lib/queryRelays';
+import { relaysForUserEvents } from './useUserRelayList';
 
 export interface Account {
   id: string;
@@ -13,17 +17,27 @@ export interface Account {
 export function useLoggedInAccounts() {
   const { nostr } = useNostr();
   const { logins, setLogin, removeLogin } = useNostrLogin();
+  const { config } = useAppContext();
+  const queryClient = useQueryClient();
 
   const { data: authors = [] } = useQuery({
     queryKey: ['logins', logins.map((l) => l.id).join(';')],
     queryFn: async ({ signal }) => {
-      const events = await nostr.query(
+      const relayLists = await Promise.all(
+        logins.map((l) => relaysForUserEvents(queryClient, nostr, l.pubkey, config.relayUrls)),
+      );
+      const relays = [...new Set(relayLists.flat())];
+      const events = await queryRelays(
+        nostr,
         [{ kinds: [0], authors: logins.map((l) => l.pubkey) }],
-        { signal: AbortSignal.any([signal, AbortSignal.timeout(1500)]) },
+        relays,
+        { signal },
       );
 
       return logins.map(({ id, pubkey }): Account => {
-        const event = events.find((e) => e.pubkey === pubkey);
+        const event = events
+          .filter((e) => e.pubkey === pubkey)
+          .sort((a, b) => b.created_at - a.created_at)[0];
         try {
           const metadata = n.json().pipe(n.metadata()).parse(event?.content);
           return { id, pubkey, metadata, event };

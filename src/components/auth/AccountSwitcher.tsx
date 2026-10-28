@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu.tsx';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx';
 import { useLoggedInAccounts, type Account } from '@/hooks/useLoggedInAccounts';
-import { genUserName } from '@/lib/genUserName';
+import { nip19 } from 'nostr-tools';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { requireOwnerApproval, type OwnerAction } from '@/lib/ownerApproval';
 import { toast } from 'sonner';
@@ -44,7 +44,9 @@ export function AccountSwitcher({ onAddAccountClick }: AccountSwitcherProps) {
   if (!currentUser) return null;
 
   const getDisplayName = (account: Account): string => {
-    return account.metadata.name ?? genUserName(account.pubkey);
+    if (account.metadata.name) return account.metadata.name;
+    const npub = nip19.npubEncode(account.pubkey);
+    return `${npub.slice(0, 9)}…${npub.slice(-4)}`;
   }
 
   return (
