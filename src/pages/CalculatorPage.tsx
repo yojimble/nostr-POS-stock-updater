@@ -159,8 +159,6 @@ export default function CalculatorPage() {
     <div className="w-full max-w-3xl mx-auto px-4 py-3 space-y-4">
       <NavTabs />
 
-      <div className="max-w-md mx-auto space-y-4">
-
       <div className="flex h-12 items-center justify-between gap-4">
         <h1 className="sr-only">Calculator</h1>
         <p className="text-xs text-muted-foreground">
@@ -168,6 +166,8 @@ export default function CalculatorPage() {
         </p>
         <LoginArea />
       </div>
+
+      <div className="max-w-md mx-auto space-y-4">
 
       <div className="rounded-lg border bg-muted/40 px-4 py-3 text-right">
         {operator && (

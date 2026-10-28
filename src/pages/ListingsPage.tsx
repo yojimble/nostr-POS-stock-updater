@@ -168,7 +168,7 @@ export default function ListingsPage() {
           )}
         >
           <Plus className="h-5 w-5 mr-2" />
-          Add
+          Increase
         </Button>
         <Button
           size="lg"
@@ -180,7 +180,7 @@ export default function ListingsPage() {
           )}
         >
           <Minus className="h-5 w-5 mr-2" />
-          Remove
+          Decrease
         </Button>
       </div>
 
