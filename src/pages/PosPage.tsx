@@ -8,6 +8,9 @@ import type { NostrEvent } from '@nostrify/nostrify';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { applyDiscount, ROUND_STEP_SATS } from '@/lib/discount';
 import {
   Select,
   SelectContent,
@@ -120,6 +123,8 @@ export default function PosPage() {
   const [showHidden, setShowHidden] = useLocalStorage<boolean>('nostr:pos-show-hidden', true);
   const [search, setSearch] = useState('');
   const [memo, setMemo] = useState('');
+  const [discountPct, setDiscountPct] = useState('');
+  const [roundDown, setRoundDown] = useLocalStorage<boolean>('nostr:pos-round-down', false);
 
   useSeoMeta({
     title: 'Point of Sale',
@@ -138,6 +143,10 @@ export default function PosPage() {
     }
     return sum;
   }, [lines, btcPrices]);
+
+  const discountValue = parseFloat(discountPct);
+  const finalSats = applyDiscount(totalSats, discountValue, roundDown);
+  const hasDiscount = finalSats < totalSats;
 
   const hasUnconvertible = lines.some((l) => toSats(l.price, l.currency, btcPrices) === null);
 
@@ -255,10 +264,11 @@ export default function PosPage() {
   const clearCart = () => {
     setCart({});
     setMemo('');
+    setDiscountPct('');
   };
 
   const handleCharge = () => {
-    if (lines.length === 0 || totalSats <= 0) return;
+    if (lines.length === 0 || finalSats <= 0) return;
     setReceiptSnapshot(lines);
     setDialogOpen(true);
   };
@@ -574,6 +584,34 @@ export default function PosPage() {
               </p>
             )}
 
+            <div className="flex items-center gap-3 text-sm">
+              <Label htmlFor="discount" className="shrink-0">Discount</Label>
+              <div className="relative w-24">
+                <Input
+                  id="discount"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={100}
+                  value={discountPct}
+                  onChange={(e) => setDiscountPct(e.target.value)}
+                  placeholder="0"
+                  className="h-9 pr-7"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                <Switch id="round-down" checked={roundDown} onCheckedChange={setRoundDown} />
+                <Label htmlFor="round-down" className="text-xs">Round down to {ROUND_STEP_SATS} sats</Label>
+              </div>
+            </div>
+
+            {hasDiscount && (
+              <p className="text-xs text-muted-foreground text-right">
+                {totalSats.toLocaleString()} sats − {(totalSats - finalSats).toLocaleString()} sats off
+              </p>
+            )}
+
             <Input
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
@@ -586,10 +624,10 @@ export default function PosPage() {
               <Button
                 className="flex-1 h-12 text-base"
                 onClick={handleCharge}
-                disabled={totalSats <= 0}
+                disabled={finalSats <= 0}
               >
                 <Zap className="h-4 w-4 mr-2" />
-                Charge {totalSats.toLocaleString()} sats
+                Charge {finalSats.toLocaleString()} sats
               </Button>
             </div>
           </div>
@@ -600,7 +638,7 @@ export default function PosPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         lightningAddress={lightningAddress}
-        sats={totalSats}
+        sats={finalSats}
         comment={(memo.trim() || `Order: ${lines.map((l) => `${l.qty}x ${l.title}`).join(', ')}`).slice(0, 200)}
         onPaid={handlePaid}
         receiptLines={receiptSnapshot.map((l) => ({ title: l.title, qty: l.qty, price: l.price, currency: l.currency }))}

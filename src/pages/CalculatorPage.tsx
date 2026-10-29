@@ -82,6 +82,7 @@ export default function CalculatorPage() {
     setOperand(null);
     setOperator(null);
     setWaitingForOperand(false);
+    setMemo('');
   };
 
   const handleDigit = (digit: string) => {
@@ -186,11 +187,11 @@ export default function CalculatorPage() {
       </div>
 
       <div className="grid grid-cols-4 gap-2">
-        <Button variant="outline" className="h-14 text-lg font-medium" onClick={resetAll}>C</Button>
+        <Button variant="outline" className="h-14 text-lg font-medium col-span-2" onClick={resetAll}>Clear</Button>
         <Button variant="outline" className="h-14 text-lg font-medium" onClick={handleBackspace}>
           <Delete className="h-5 w-5" />
         </Button>
-        <Button variant="outline" className="h-14 text-2xl font-medium col-span-2" onClick={() => handleOperator('÷')}>÷</Button>
+        <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleOperator('÷')}>÷</Button>
 
         <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleDigit('7')}>7</Button>
         <Button variant="outline" className="h-14 text-2xl font-medium" onClick={() => handleDigit('8')}>8</Button>
