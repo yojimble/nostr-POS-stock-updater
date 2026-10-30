@@ -1,5 +1,5 @@
 import { generateSecretKey, getPublicKey, nip04, nip44 } from 'nostr-tools';
-import type { NPool, NostrEvent } from '@nostrify/nostrify';
+import type { NostrEvent } from '@nostrify/nostrify';
 
 export interface NostrConnectSession {
   uri: string;
@@ -59,37 +59,62 @@ function decryptAck(clientSecretKey: Uint8Array, event: NostrEvent): string {
 /**
  * Waits for the remote signer (e.g. Amber) to respond to a nostrconnect:// session
  * with the expected `ack` secret, and returns the remote signer's pubkey.
+ *
+ * Uses bare WebSockets rather than the relay pool so it also works on old Android WebViews.
  */
-export async function waitForNostrConnectAck(
-  nostr: NPool,
+export function waitForNostrConnectAck(
   clientSecretKey: Uint8Array,
   session: NostrConnectSession,
   signal: AbortSignal,
   onDebug?: (line: string) => void,
 ): Promise<string> {
   // No `since` filter: the key and secret are fresh per session, and a skewed device clock would hide the reply
-  const pool = nostr.group(session.relays);
+  const filter = { kinds: [24133], '#p': [session.clientPubkey] };
 
-  for await (const msg of pool.req([{ kinds: [24133], '#p': [session.clientPubkey] }], { signal })) {
-    if (msg[0] !== 'EVENT') {
-      onDebug?.(`relay says ${msg[0]}${msg[0] === 'CLOSED' ? `: ${msg[2]}` : ''}`);
-      continue;
-    }
-    const event = msg[2] as NostrEvent;
-    onDebug?.(`got reply event from ${event.pubkey.slice(0, 8)}`);
+  return new Promise((resolve, reject) => {
+    const sockets: WebSocket[] = [];
+    const finish = (done: () => void) => {
+      for (const ws of sockets) ws.close();
+      done();
+    };
 
-    try {
-      const plaintext = decryptAck(clientSecretKey, event);
-      const data = JSON.parse(plaintext);
-      if (data.result === session.secret) {
-        return event.pubkey;
+    signal.addEventListener('abort', () => finish(() => reject(new Error('Timed out waiting for the signer to connect'))), { once: true });
+
+    for (const url of session.relays) {
+      const host = url.replace(/^wss:\/\//, '');
+      try {
+        const ws = new WebSocket(url);
+        sockets.push(ws);
+        ws.onopen = () => {
+          onDebug?.(`${host}: connected`);
+          ws.send(JSON.stringify(['REQ', 'connect', filter]));
+        };
+        ws.onerror = () => onDebug?.(`${host}: connection error`);
+        ws.onclose = (e) => onDebug?.(`${host}: closed (${e.code})`);
+        ws.onmessage = (e) => {
+          let msg: unknown[];
+          try {
+            msg = JSON.parse(String(e.data));
+          } catch {
+            return;
+          }
+          if (msg[0] !== 'EVENT') {
+            onDebug?.(`${host}: ${String(msg[0])}`);
+            return;
+          }
+          const event = msg[2] as NostrEvent;
+          onDebug?.(`${host}: reply from ${event.pubkey.slice(0, 8)}`);
+          try {
+            const data = JSON.parse(decryptAck(clientSecretKey, event));
+            if (data.result === session.secret) finish(() => resolve(event.pubkey));
+            else onDebug?.('reply did not carry our secret');
+          } catch (err) {
+            onDebug?.(`could not read reply: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        };
+      } catch (err) {
+        onDebug?.(`${host}: ${err instanceof Error ? err.message : String(err)}`);
       }
-      onDebug?.('reply did not carry our secret');
-    } catch (err) {
-      // Not decryptable with our key, or not the ack we're waiting for — ignore.
-      onDebug?.(`could not read reply: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }
-
-  throw new Error('Timed out waiting for the signer to connect');
+  });
 }

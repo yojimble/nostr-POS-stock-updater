@@ -4,7 +4,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Shield, AlertTriangle, Cloud, QrCode, Loader2, RotateCcw, Copy, Check, ExternalLink } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useNostr } from '@nostrify/react';
 import { nip19 } from 'nostr-tools';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,7 +47,6 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
     extension?: string;
   }>({});
   const login = useLoginActions();
-  const { nostr } = useNostr();
   const { config } = useAppContext();
 
   const [qrStatus, setQrStatus] = useState<'idle' | 'waiting' | 'connected' | 'error'>('idle');
@@ -184,13 +182,14 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
     setQrSession(session);
     setQrStatus('waiting');
     setQrError('');
-    setQrDebug([`waiting on ${relays.join(', ')}`]);
+    setQrDebug([]);
+    const addDebug = (line: string) => setQrDebug((prev) => [...prev.slice(-11), line]);
 
     const abort = new AbortController();
     qrAbortRef.current = abort;
     const timeout = setTimeout(() => abort.abort(), 3 * 60 * 1000);
 
-    waitForNostrConnectAck(nostr, clientSecretKey, session, abort.signal, (line) => setQrDebug((prev) => [...prev.slice(-5), line]))
+    waitForNostrConnectAck(clientSecretKey, session, abort.signal, addDebug)
       .then(async (remotePubkey) => {
         clearTimeout(timeout);
         if (qrAbortRef.current !== abort) return;
