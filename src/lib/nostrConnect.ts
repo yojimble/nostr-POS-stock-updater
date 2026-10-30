@@ -65,13 +65,18 @@ export async function waitForNostrConnectAck(
   clientSecretKey: Uint8Array,
   session: NostrConnectSession,
   signal: AbortSignal,
+  onDebug?: (line: string) => void,
 ): Promise<string> {
+  // No `since` filter: the key and secret are fresh per session, and a skewed device clock would hide the reply
   const pool = nostr.group(session.relays);
-  const since = Math.floor(Date.now() / 1000) - 10;
 
-  for await (const msg of pool.req([{ kinds: [24133], '#p': [session.clientPubkey], since }], { signal })) {
-    if (msg[0] !== 'EVENT') continue;
+  for await (const msg of pool.req([{ kinds: [24133], '#p': [session.clientPubkey] }], { signal })) {
+    if (msg[0] !== 'EVENT') {
+      onDebug?.(`relay says ${msg[0]}${msg[0] === 'CLOSED' ? `: ${msg[2]}` : ''}`);
+      continue;
+    }
     const event = msg[2] as NostrEvent;
+    onDebug?.(`got reply event from ${event.pubkey.slice(0, 8)}`);
 
     try {
       const plaintext = decryptAck(clientSecretKey, event);
@@ -79,8 +84,10 @@ export async function waitForNostrConnectAck(
       if (data.result === session.secret) {
         return event.pubkey;
       }
-    } catch {
+      onDebug?.('reply did not carry our secret');
+    } catch (err) {
       // Not decryptable with our key, or not the ack we're waiting for — ignore.
+      onDebug?.(`could not read reply: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

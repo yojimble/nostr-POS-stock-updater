@@ -9,6 +9,10 @@ export default defineConfig(() => ({
     host: "::",
     port: 5173,
   },
+  build: {
+    // Android 6 System WebView tops out near Chrome 106
+    target: "chrome87",
+  },
   plugins: [
     react(),
     VitePWA({

@@ -54,6 +54,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   const [qrStatus, setQrStatus] = useState<'idle' | 'waiting' | 'connected' | 'error'>('idle');
   const [qrSession, setQrSession] = useState<NostrConnectSession | null>(null);
   const [qrError, setQrError] = useState('');
+  const [qrDebug, setQrDebug] = useState<string[]>([]);
   const qrAbortRef = useRef<AbortController | null>(null);
 
   // Some NIP-07 extensions (Alby, nos2x-fox, etc.) inject `window.nostr`
@@ -183,12 +184,13 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
     setQrSession(session);
     setQrStatus('waiting');
     setQrError('');
+    setQrDebug([`waiting on ${relays.join(', ')}`]);
 
     const abort = new AbortController();
     qrAbortRef.current = abort;
     const timeout = setTimeout(() => abort.abort(), 3 * 60 * 1000);
 
-    waitForNostrConnectAck(nostr, clientSecretKey, session, abort.signal)
+    waitForNostrConnectAck(nostr, clientSecretKey, session, abort.signal, (line) => setQrDebug((prev) => [...prev.slice(-5), line]))
       .then(async (remotePubkey) => {
         clearTimeout(timeout);
         if (qrAbortRef.current !== abort) return;
@@ -359,6 +361,9 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
                         'Connected!'
                       )}
                     </p>
+                    <div className="text-[10px] font-mono text-muted-foreground break-all text-left space-y-0.5">
+                      {qrDebug.map((line, i) => <p key={i}>{line}</p>)}
+                    </div>
                   </>
                 )}
 
