@@ -32,6 +32,9 @@ async function waitForNostrExtension(timeoutMs = 1500): Promise<boolean> {
   return 'nostr' in window;
 }
 
+// Public relays that answer reliably, offered first in the QR login
+const QR_RELAYS = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://relay.ditto.pub', 'wss://relay.nsec.app'];
+
 const validateBunkerUri = (uri: string) => {
   return uri.startsWith('bunker://');
 };
@@ -174,9 +177,8 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLogin, onS
   const startQrSession = () => {
     qrAbortRef.current?.abort();
 
-    // offer several relays so the signer can reach at least one of them
-    const relays = config.relayUrls.filter(Boolean).slice(0, 3);
-    if (!relays.length) relays.push('wss://relay.damus.io');
+    // offer several relays so the signer can reach at least one of them; the configured ones can be slow or down, so reliable public relays go first
+    const relays = [...new Set([...QR_RELAYS, ...config.relayUrls.filter(Boolean)])].slice(0, 4);
     const { session, clientSecretKey } = createNostrConnectSession(relays, 'Nostr Stock Updater');
 
     setQrSession(session);
